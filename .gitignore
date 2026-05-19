@@ -1,0 +1,7 @@
+﻿# Local config
+appsettings.json
+.env
+bin/
+obj/
+*.user
+*.vs

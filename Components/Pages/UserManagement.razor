@@ -1,0 +1,757 @@
+﻿@page "/users"
+
+@using DataVipWeb.Models
+@using DataVipWeb.Services
+
+@inject SupabaseService SupabaseService
+@inject NavigationManager Nav
+
+<h1 class="page-title">จัดการสิทธิ์</h1>
+
+<div class="user-page">
+
+    <div class="top-bar">
+        <button type="button"
+                class="add-btn"
+                @onclick="ShowAddModal">
+            + เพิ่มผู้ใช้งาน
+        </button>
+    </div>
+
+    <table class="user-table">
+        <thead>
+            <tr>
+                <th>ชื่อผู้ใช้</th>
+                <th>ตำแหน่ง</th>
+                <th>สถานะ</th>
+                <th>จัดการ</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Username</td>
+
+                    <td>
+                        <span class="role-badge @user.Role">
+                            @user.Role
+                        </span>
+                    </td>
+
+                    <td>
+                        @(user.IsActive ? "ใช้งาน" : "ปิดใช้งาน")
+                    </td>
+
+                    <td>
+                        <button type="button"
+                                class="edit-btn"
+                                @onclick="() => ShowEditModal(user)">
+                            แก้ไข
+                        </button>
+
+                        <button type="button"
+                                class="toggle-active-btn @(user.IsActive ? "danger" : "success")"
+                                @onclick="() => ToggleUserActive(user)">
+                            @(user.IsActive ? "ปิดใช้งาน" : "เปิดใช้งาน")
+                        </button>
+
+                        <button type="button"
+                                class="delete-btn"
+                                @onclick="() => ShowDeleteModal(user)">
+                            ลบ
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+</div>
+
+@if (showAddUserModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-box">
+
+            <h2>เพิ่มผู้ใช้งาน</h2>
+
+            <input placeholder="Username"
+                   @bind="newUser.Username" />
+
+            <input placeholder="Password"
+                   @bind="newUser.Password" />
+
+            <select @bind="newUser.Role">
+                <option value="owner">owner</option>
+                <option value="admin">admin</option>
+                <option value="user">user</option>
+            </select>
+
+            <div class="modal-actions">
+                <button type="button"
+                        class="cancel-btn"
+                        @onclick="CloseAddModal">
+                    ยกเลิก
+                </button>
+
+                <button type="button"
+                        class="save-btn"
+                        @onclick="SaveNewUser">
+                    บันทึก
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+@if (showEditUserModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-box">
+
+            <h2>แก้ไขผู้ใช้งาน</h2>
+
+            <input placeholder="Username"
+                   @bind="editUser.Username" />
+
+            <input placeholder="Password"
+                   @bind="editUser.Password" />
+
+            <select @bind="editUser.Role">
+                <option value="owner">owner</option>
+                <option value="admin">admin</option>
+                <option value="user">user</option>
+            </select>
+
+            <label class="active-check">
+                <input type="checkbox"
+                       @bind="editUser.IsActive" />
+                เปิดใช้งาน
+            </label>
+
+            <div class="modal-actions">
+                <button type="button"
+                        class="cancel-btn"
+                        @onclick="CloseEditModal">
+                    ยกเลิก
+                </button>
+
+                <button type="button"
+                        class="save-btn"
+                        @onclick="SaveEditUser">
+                    บันทึก
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@if (showDeleteModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-box">
+
+            <h2>ยืนยันการลบ</h2>
+
+            <p>
+                ต้องการลบผู้ใช้งานนี้ใช่หรือไม่?
+            </p>
+
+            <div class="modal-actions">
+
+                <button type="button"
+                        class="cancel-btn"
+                        @onclick="CloseDeleteModal">
+                    ยกเลิก
+                </button>
+
+                <button type="button"
+                        class="delete-btn"
+                        @onclick="DeleteUser">
+                    ลบผู้ใช้งาน
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+}
+@if (showMessage)
+{
+    <div class="user-toast">
+        @messageText
+    </div>
+}
+
+@code {
+    private List<AppUser> users = new();
+    private bool showAddUserModal = false;
+    private bool isSavingUser = false;
+    private bool isDeletingUser = false;
+    
+
+    private bool showEditUserModal = false;
+    private bool showDeleteModal = false;
+
+    private AppUser? editingUser;
+    private AppUser? deletingUser;
+    private string messageText = "";
+    private bool showMessage = false;
+
+    private void ShowMessage(string message)
+    {
+        messageText = message;
+        showMessage = true;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(2500);
+            showMessage = false;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private AppUser editUser = new()
+    {
+        Role = "user",
+        IsActive = true
+    };
+
+    private async Task ToggleUserActive(AppUser user)
+    {
+        // กัน owner ปิดบัญชีตัวเอง
+        if (user.Username == AuthState.Username && user.Role == "owner")
+        {
+            return;
+        }
+
+        user.IsActive = !user.IsActive;
+
+        await SupabaseService.Client
+            .From<AppUser>()
+            .Update(user);
+
+        await LoadUsers();
+    }
+    private void ShowDeleteModal(AppUser user)
+    {
+        // กันลบ owner
+        if (user.Role == "owner")
+        {
+            return;
+        }
+
+        // กันลบตัวเอง
+        if (user.Username == AuthState.Username)
+        {
+            return;
+        }
+
+        deletingUser = user;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        deletingUser = null;
+        showDeleteModal = false;
+    }
+
+    private async Task DeleteUser()
+    {
+        if (deletingUser == null)
+            return;
+
+        if (isDeletingUser)
+            return;
+
+        isDeletingUser = true;
+
+        try
+        {
+            await SupabaseService.Client
+                .From<AppUser>()
+                .Delete(deletingUser);
+
+            await LoadUsers();
+
+            CloseDeleteModal();
+
+            ShowMessage("🗑 ลบผู้ใช้งานสำเร็จ");
+        }
+        finally
+        {
+            isDeletingUser = false;
+        }
+    }
+
+    private AppUser newUser = new()
+    {
+        Role = "user",
+        IsActive = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        if (AuthState.Role != "owner")
+        {
+            Nav.NavigateTo("/employees");
+            return;
+        }
+
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        var result = await SupabaseService.Client
+            .From<AppUser>()
+            .Get();
+
+        users = result.Models.ToList();
+    }
+
+    private void ShowAddModal()
+    {
+        newUser = new AppUser
+        {
+            Role = "user",
+            IsActive = true
+        };
+
+        showAddUserModal = true;
+    }
+
+    private void CloseAddModal()
+    {
+        showAddUserModal = false;
+    }
+    private void ShowEditModal(AppUser user)
+    {
+        editingUser = user;
+
+        editUser = new AppUser
+        {
+            Id = user.Id,
+            Username = user.Username,
+            Password = "",
+            Role = user.Role,
+            IsActive = user.IsActive
+        };
+
+        showEditUserModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditUserModal = false;
+        editingUser = null;
+
+        editUser = new AppUser
+        {
+            Role = "user",
+            IsActive = true
+        };
+    }
+
+    private async Task SaveEditUser()
+    {
+        if (editingUser == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(editUser.Username))
+        {
+            ShowMessage("⚠ กรุณากรอก Username");
+            return;
+        }
+        if (users.Any(u =>
+        u.Id != editingUser.Id &&
+        u.Username.Equals(editUser.Username.Trim(), StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        editingUser.Username = editUser.Username.Trim();
+        if (!string.IsNullOrWhiteSpace(editUser.Password))
+        {
+            editingUser.Password =
+                BCrypt.Net.BCrypt.HashPassword(editUser.Password.Trim());
+        }
+        editingUser.Role = editUser.Role;
+        editingUser.IsActive = editUser.IsActive;
+
+        await SupabaseService.Client
+            .From<AppUser>()
+            .Update(editingUser);
+
+        await LoadUsers();
+
+        CloseEditModal();
+    }
+
+    private async Task SaveNewUser()
+    {
+        if (string.IsNullOrWhiteSpace(newUser.Username) ||
+            string.IsNullOrWhiteSpace(newUser.Password))
+        {
+            ShowMessage("⚠ กรุณากรอก Username และ Password");
+            return;
+        }
+
+        if (users.Any(u =>
+            u.Username.Equals(newUser.Username.Trim(), StringComparison.OrdinalIgnoreCase)))
+        {
+            ShowMessage("❌ Username นี้มีอยู่แล้ว");
+            return;
+        }
+
+        newUser.Username = newUser.Username.Trim();
+        newUser.Password =
+        BCrypt.Net.BCrypt.HashPassword(newUser.Password.Trim());
+        newUser.Role = newUser.Role.Trim();
+        newUser.IsActive = true;
+
+        await SupabaseService.Client
+            .From<AppUser>()
+            .Insert(newUser);
+
+        await LoadUsers();
+
+        showAddUserModal = false;
+
+        ShowMessage("✅ เพิ่มผู้ใช้งานสำเร็จ");
+    }
+}
+
+<style>
+    .page-title {
+        font-size: 38px;
+        font-weight: 900;
+        color: #1e1b4b;
+        margin-bottom: 22px;
+        letter-spacing: -.5px;
+    }
+
+    .user-page {
+        background: rgba(255,255,255,.78);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(255,255,255,.45);
+        border-radius: 30px;
+        padding: 30px;
+        box-shadow: 0 18px 50px rgba(30,27,75,.08);
+        animation: fadeUp .35s ease;
+    }
+
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+    }
+
+        .top-bar::before {
+            content: "ระบบจัดการผู้ใช้งานและสิทธิ์การเข้าถึง";
+            color: #8b8b9f;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+    .add-btn {
+        border: none;
+        background: linear-gradient(90deg,#6d28ff,#a855f7);
+        color: white;
+        padding: 14px 24px;
+        border-radius: 16px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 12px 25px rgba(124,58,237,.28);
+        transition: .25s;
+    }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+        }
+
+    .user-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+    }
+
+        .user-table th {
+            background: linear-gradient(90deg,#f3e8ff,#ede9fe);
+            padding: 16px 18px;
+            text-align: left;
+            color: #6d28d9;
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+            .user-table th:first-child {
+                border-radius: 16px 0 0 16px;
+            }
+
+            .user-table th:last-child {
+                border-radius: 0 16px 16px 0;
+            }
+
+        .user-table td {
+            background: white;
+            padding: 18px;
+            border-bottom: 1px solid #f1f1f5;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .user-table tbody tr {
+            transition: .22s ease;
+            box-shadow: 0 8px 22px rgba(0,0,0,.035);
+        }
+
+            .user-table tbody tr:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 14px 32px rgba(124,58,237,.12);
+            }
+
+        .user-table td:first-child {
+            border-radius: 16px 0 0 16px;
+        }
+
+        .user-table td:last-child {
+            border-radius: 0 16px 16px 0;
+        }
+
+    .role-badge {
+        padding: 7px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 900;
+        color: white;
+        box-shadow: 0 8px 18px rgba(0,0,0,.12);
+    }
+
+    .owner {
+        background: linear-gradient(90deg,#dc2626,#ef4444);
+    }
+
+    .admin {
+        background: linear-gradient(90deg,#2563eb,#3b82f6);
+    }
+
+    .user {
+        background: linear-gradient(90deg,#16a34a,#22c55e);
+    }
+
+    .edit-btn,
+    .delete-btn,
+    .toggle-active-btn {
+        border: none;
+        color: white;
+        padding: 9px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 900;
+        margin-right: 6px;
+        transition: .2s;
+    }
+
+    .edit-btn {
+        background: linear-gradient(90deg,#f59e0b,#fbbf24);
+    }
+
+    .delete-btn {
+        background: linear-gradient(90deg,#dc2626,#ef4444);
+    }
+
+    .toggle-active-btn.danger {
+        background: linear-gradient(90deg,#dc2626,#ef4444);
+    }
+
+    .toggle-active-btn.success {
+        background: linear-gradient(90deg,#16a34a,#22c55e);
+    }
+
+    .edit-btn:hover,
+    .delete-btn:hover,
+    .toggle-active-btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.04);
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(9,0,31,.58);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+    }
+
+    .modal-box {
+        width: 440px;
+        background: rgba(255,255,255,.92);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(255,255,255,.45);
+        border-radius: 26px;
+        padding: 28px;
+        box-shadow: 0 30px 70px rgba(0,0,0,.22);
+        animation: modalPop .25s ease;
+    }
+
+        .modal-box h2 {
+            margin-top: 0;
+            color: #1e1b4b;
+            font-size: 26px;
+            font-weight: 900;
+        }
+
+        .modal-box input,
+        .modal-box select {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 14px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            outline: none;
+            font-weight: 700;
+            transition: .22s;
+        }
+
+            .modal-box input:focus,
+            .modal-box select:focus {
+                border-color: #7c3aed;
+                box-shadow: 0 0 0 4px rgba(124,58,237,.12);
+            }
+
+    .active-check {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 6px;
+        font-weight: 800;
+        color: #1e1b4b;
+    }
+
+        .active-check input {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+        }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .cancel-btn {
+        border: none;
+        background: #f3f4f6;
+        padding: 12px 20px;
+        border-radius: 14px;
+        cursor: pointer;
+        font-weight: 900;
+        color: #374151;
+    }
+
+    .save-btn {
+        border: none;
+        background: linear-gradient(90deg,#6d28ff,#a855f7);
+        color: white;
+        padding: 12px 22px;
+        border-radius: 14px;
+        cursor: pointer;
+        font-weight: 900;
+        box-shadow: 0 10px 22px rgba(124,58,237,.25);
+    }
+
+    .user-toast {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        background: linear-gradient(90deg,#6d28ff,#a855f7);
+        color: white;
+        padding: 15px 24px;
+        border-radius: 16px;
+        font-weight: 900;
+        box-shadow: 0 12px 28px rgba(124,58,237,.35);
+        z-index: 9999;
+        animation: toastSlide .28s ease;
+    }
+
+    @@keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes modalPop {
+        from {
+            opacity: 0;
+            transform: scale(.92) translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    @@keyframes toastSlide {
+        from {
+            opacity: 0;
+            transform: translateX(40px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @@media (max-width: 900px) {
+        .user-page {
+            padding: 18px;
+        }
+
+        .top-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 14px;
+        }
+
+        .add-btn {
+            width: 100%;
+        }
+
+        .user-table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .modal-box {
+            width: 92%;
+        }
+    }
+
+</style>
