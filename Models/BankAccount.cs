@@ -1,13 +1,12 @@
 ﻿using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
-using System.Text.Json;
 
 namespace DataVipWeb.Models
 {
     [Table("bank_accounts")]
     public class BankAccount : BaseModel
     {
-        [PrimaryKey("id")]
+        [PrimaryKey("id", false)]
         public Guid Id { get; set; }
 
         [Column("group_name")]
@@ -27,18 +26,6 @@ namespace DataVipWeb.Models
 
         [Column("account_number")]
         public string AccountNumber { get; set; } = "";
-
-        [Column("received_date")]
-        public DateTime? ReceivedDate { get; set; }
-
-        [Column("released_date")]
-        public DateTime? ReleasedDate { get; set; }
-
-        [Column("details")]
-        public JsonElement Details { get; set; }
-
-        [Column("created_at")]
-        public DateTime CreatedAt { get; set; }
 
         [Column("branch")]
         public string Branch { get; set; } = "";

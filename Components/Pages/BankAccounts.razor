@@ -27,7 +27,7 @@
                 }
             </select>
 
-            <button class="add-btn">
+            <button class="add-btn" @onclick="OpenAddModal">
                 + เพิ่มบัญชี
             </button>
         </div>
@@ -57,7 +57,7 @@
             <div class="summary-icon">📈</div>
             <div>
                 <p>เพิ่มใหม่เดือนนี้</p>
-                <h1>@bankAccounts.Count(x => x.CreatedAt.Month == DateTime.Today.Month && x.CreatedAt.Year == DateTime.Today.Year)</h1>
+                <h1>0</h1>
                 <span>บัญชี</span>
             </div>
         </div>
@@ -122,38 +122,76 @@
                 </thead>
 
                 <tbody>
-                    @foreach (var item in FilteredAccounts)
+
+                    @if (isLoading)
                     {
                         <tr>
-                            <td>
-                                <span class="dot"></span>
-                                @item.GroupName
-                            </td>
-
-                            <td>
-                                <div class="bank-name">
-                                    <span class="bank-logo">🏦</span>
-                                    @item.BankName
-                                </div>
-                            </td>
-
-                            <td>@item.AccountName</td>
-                            <td>@item.AccountNumber</td>
-                            <td>@FormatThaiDate(item.CreatedAt)</td>
-
-                            <td>
-                                <button class="detail-btn"
-                                        @onclick="() => OpenDetail(item)">
-                                    ดูรายละเอียด
-                                </button>
-                            </td>
-
-                            <td>
-                                <button class="icon-btn edit">✎</button>
-                                <button class="icon-btn delete">🗑</button>
+                            <td colspan="7">
+                                กำลังโหลดข้อมูล...
                             </td>
                         </tr>
                     }
+                    else if (!string.IsNullOrWhiteSpace(loadError))
+                    {
+                        <tr>
+                            <td colspan="7">
+                                Error: @loadError
+                            </td>
+                        </tr>
+                    }
+                    else if (!FilteredAccounts.Any())
+                    {
+                        <tr>
+                            <td colspan="7">
+                                ยังไม่มีข้อมูลบัญชี
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in FilteredAccounts)
+                        {
+                            <tr>
+
+                                <td>
+                                    <span class="dot"></span>
+                                    @item.GroupName
+                                </td>
+
+                                <td>
+                                    <div class="bank-name">
+                                        <span class="bank-logo">🏦</span>
+                                        @item.BankName
+                                    </div>
+                                </td>
+
+                                <td>@item.AccountName</td>
+
+                                <td>@item.AccountNumber</td>
+
+                                <td>-</td>
+
+                                <td>
+                                    <button class="detail-btn"
+                                            @onclick="() => OpenDetail(item)">
+                                        ดูรายละเอียด
+                                    </button>
+                                </td>
+
+                                <td>
+                                    <button class="icon-btn edit">
+                                        ✎
+                                    </button>
+
+                                    <button class="icon-btn delete">
+                                        🗑
+                                    </button>
+                                </td>
+
+                            </tr>
+                        }
+                    }
+
                 </tbody>
             </table>
         </div>
@@ -186,13 +224,76 @@
             <p><span>ประเภทบัญชี</span> <b>@selectedAccount.AccountType</b></p>
             <p><span>สาขา</span> <b>@selectedAccount.Branch</b></p>
             <p><span>หมายเหตุ</span> <b>@selectedAccount.Note</b></p>
-            <p><span>วันที่เพิ่ม</span> <b>@FormatThaiDate(selectedAccount.CreatedAt)</b></p>
+            <p><span>วันที่เพิ่ม</span> <b>-</b></p>
         </div>
 
         <button class="close-detail-btn" @onclick="CloseDetail">
             ปิด
         </button>
 
+    </div>
+}
+@if (showAddModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-box large-modal">
+
+            <div class="modal-header">
+                <h2>เพิ่มบัญชีธนาคาร</h2>
+                <button class="modal-close" @onclick="CloseAddModal">×</button>
+            </div>
+
+            <div class="modal-grid">
+
+                <input placeholder="สายบัญชี เช่น สาย 1"
+                       @bind="newAccount.GroupName" />
+
+                <select @bind="newAccount.AccountType">
+                    <option>SCB บุคคล</option>
+                    <option>SCB นิติ</option>
+                    <option>KTB บุคคล</option>
+                    <option>KTB นิติ</option>
+                </select>
+
+                <input placeholder="ธนาคาร"
+                       @bind="newAccount.BankName" />
+
+                <input placeholder="ชื่อบัญชี"
+                       @bind="newAccount.AccountName" />
+
+                <input placeholder="ชื่อเจ้าของบัญชี"
+                       @bind="newAccount.OwnerName" />
+
+                <input placeholder="เลขที่บัญชี"
+                       @bind="newAccount.AccountNumber" />
+
+                <input placeholder="สาขา"
+                       @bind="newAccount.Branch" />
+
+                <input placeholder="หมายเหตุ"
+                       @bind="newAccount.Note" />
+
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel-btn" @onclick="CloseAddModal">
+                    ยกเลิก
+                </button>
+
+                <button class="save-btn"
+                        disabled="@isSaving"
+                        @onclick="SaveAccount">
+                    @(isSaving ? "กำลังบันทึก..." : "บันทึก")
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+@if (!string.IsNullOrWhiteSpace(warningMessage))
+{
+    <div class="warning-toast">
+        @warningMessage
     </div>
 }
 
@@ -203,6 +304,30 @@
 
     private List<BankAccount> bankAccounts = new();
     private bool isLoading = true;
+    private string loadError = "";
+
+    private bool showAddModal = false;
+    private bool isSaving = false;
+    private string warningMessage = "";
+
+    private BankAccount newAccount = new();
+
+    private void OpenAddModal()
+    {
+        newAccount = new BankAccount
+        {
+            GroupName = "",
+            BankName = "SCB",
+            AccountType = "SCB บุคคล"
+        };
+
+        showAddModal = true;
+    }
+
+    private void CloseAddModal()
+    {
+        showAddModal = false;
+    }
 
     private List<string> Groups =>
         bankAccounts
@@ -243,17 +368,61 @@
 
     private async Task LoadData()
     {
-        isLoading = true;
+        try
+        {
+            isLoading = true;
+            loadError = "";
 
-        var result = await SupabaseService.Client
-            .From<BankAccount>()
-            .Get();
+            var result = await SupabaseService.Client
+                .From<BankAccount>()
+                .Get();
 
-        bankAccounts = result.Models;
-
-        isLoading = false;
+            bankAccounts = result.Models ?? new List<BankAccount>();
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
+    private async Task SaveAccount()
+    {
+    if (isSaving)
+        return;
+
+    if (string.IsNullOrWhiteSpace(newAccount.GroupName) ||
+        string.IsNullOrWhiteSpace(newAccount.BankName) ||
+        string.IsNullOrWhiteSpace(newAccount.AccountType) ||
+        string.IsNullOrWhiteSpace(newAccount.AccountName) ||
+        string.IsNullOrWhiteSpace(newAccount.AccountNumber))
+    {
+        warningMessage = "กรุณากรอกข้อมูลให้ครบ";
+        return;
+    }
+
+    isSaving = true;
+
+    try
+    {
+        await SupabaseService.Client
+            .From<BankAccount>()
+            .Insert(newAccount);
+
+        await LoadData();
+
+        showAddModal = false;
+        newAccount = new BankAccount();
+    }
+    finally
+    {
+        isSaving = false;
+    }
+    }
+    
     private string FormatThaiDate(DateTime date)
     {
         string[] months =
@@ -701,5 +870,108 @@
             top: 80px;
             width: auto;
         }
+    }
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(9, 0, 31, 0.58);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .modal-box {
+        width: 560px;
+        background: white;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 25px 60px rgba(0,0,0,.18);
+    }
+
+    .large-modal {
+        width: 760px;
+        max-width: 92vw;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #1e1b4b;
+        }
+
+    .modal-close {
+        border: none;
+        background: #f3e8ff;
+        color: #6d28ff;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        font-size: 24px;
+        cursor: pointer;
+    }
+
+    .modal-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+
+        .modal-grid input,
+        .modal-grid select {
+            padding: 13px 14px;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            outline: none;
+            font-weight: 700;
+        }
+
+            .modal-grid input:focus,
+            .modal-grid select:focus {
+                border-color: #7c3aed;
+                box-shadow: 0 0 0 4px rgba(124,58,237,.12);
+            }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 22px;
+    }
+
+    .cancel-btn {
+        border: none;
+        background: #f3f4f6;
+        padding: 11px 18px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .save-btn {
+        border: none;
+        background: linear-gradient(90deg,#6d28ff,#a855f7);
+        color: white;
+        padding: 11px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+    .warning-toast {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        background: linear-gradient(90deg,#f59e0b,#fbbf24);
+        color: white;
+        padding: 14px 22px;
+        border-radius: 14px;
+        font-weight: 700;
+        z-index: 99999;
     }
 </style>

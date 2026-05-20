@@ -9,7 +9,6 @@ namespace DataVipWeb.Services
 
         public SupabaseService(IConfiguration configuration)
         {
-            // ดึงค่า SupabaseUrl และ SupabaseKey จาก appsettings.json
             var supabaseUrl = configuration["SupabaseUrl"];
             var supabaseKey = configuration["SupabaseKey"];
 
