@@ -26,13 +26,11 @@
     private string jsonPath = "employees.json";
     private bool showWarningToast = false;
     private string warningMessage = "";
-    private string currentTime =
-    DateTime.Now.ToString("HH:mm:ss");
-    private System.Timers.Timer? clockTimer;
     private bool isSaving = false;
     private bool isLoading = true;
     private bool isDeleting = false;
     private bool isEditing = false;
+
 
     
 
@@ -79,18 +77,8 @@
             Nav.NavigateTo("/");
             return;
         }
-        clockTimer = new System.Timers.Timer(1000);
 
-        clockTimer.Elapsed += async (_, _) =>
-        {
-            currentTime = DateTime.Now.ToString("HH:mm:ss");
-
-            await InvokeAsync(StateHasChanged);
-        };
-
-        clockTimer.Start();
         await LoadData();
-
     }
 
     private async Task LoadData()
@@ -443,9 +431,7 @@
         <p class="page-subtitle">
             ระบบจัดการข้อมูลพนักงาน
         </p>
-        <div class="live-clock">
-            🕒 @currentTime
-        </div>
+        
 
     </div>
 
@@ -1024,7 +1010,6 @@
 
         tbody tr:hover {
             background: #f3e8ff;
-            transform: scale(1.004);
             box-shadow: inset 4px 0 0 #7c3aed;
         }
 
@@ -1503,7 +1488,6 @@
         }
 
     tbody tr {
-        animation: rowFade .35s ease;
     }
 
     @@keyframes rowFade {
@@ -1534,12 +1518,7 @@
         left: 120%;
     }
 
-    .live-clock {
-        margin-top: 10px;
-        color: #6d28ff;
-        font-weight: 700;
-        font-size: 15px;
-    }
+    
 
     @@media (max-width: 900px) {
 
