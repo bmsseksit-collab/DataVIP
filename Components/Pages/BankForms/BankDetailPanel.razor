@@ -5,14 +5,44 @@
 {
     <div class="modal-overlay">
         <div class="modal-box detail-modal-box">
+            <button class="detail-floating-close" @onclick="OnClose">
+                ×
+            </button>
 
             <div class="modal-header">
-                <h2>
-                    รายละเอียดบัญชี
-                    <span class="detail-title-group">@Account.GroupName</span>
-                </h2>
 
-                <button class="modal-close" @onclick="OnClose">×</button>
+                <div class="header-left">
+                    <h2>
+                        รายละเอียดบัญชี
+                        <span class="detail-title-group">@Account.GroupName</span>
+                    </h2>
+                </div>
+
+                <div class="header-right">
+
+                   
+
+                    @if (!string.IsNullOrWhiteSpace(Account.Status))
+                    {
+                        <div class="detail-status-box">
+
+                            <span class="@GetStatusClass(Account.Status)">
+                                @Account.Status
+                            </span>
+
+                            @if (Account.Status != "พร้อมใช้งาน" &&
+                                 !string.IsNullOrWhiteSpace(Account.StatusNote))
+                            {
+                                <div class="detail-note-badge">
+                                    @Account.StatusNote
+                                </div>
+                            }
+
+                        </div>
+                    }
+
+                </div>
+
             </div>
 
             <div class="detail-bank-head">
@@ -61,16 +91,16 @@
                 {
                     var scbCorporateOrder = new[]
                     {
-        "CompanyNo",
-        "TokenPin",
-        "Phone",
-        "SimExpire",
-        "ScbUser",
-        "ScbPass",
-        "Email",
-        "EmailPass",
-        "AppCode"
-    };
+                        "CompanyNo",
+                        "TokenPin",
+                        "Phone",
+                        "SimExpire",
+                        "ScbUser",
+                        "ScbPass",
+                        "Email",
+                        "EmailPass",
+                        "AppCode"
+                    };
 
                     foreach (var key in scbCorporateOrder)
                     {
@@ -104,6 +134,7 @@
                         }
                     }
                 }
+                
 
                 // =========================
                 // บุคคลทั่วไป
@@ -232,6 +263,17 @@
         return Details.ContainsKey(key) ? Details[key] : "";
     }
 
+    private string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "ใช้งานอยู่" => "status-active",
+            "พร้อมใช้งาน" => "status-ready",
+            "มีปัญหา" => "status-problem",
+            _ => "status-ready"
+        };
+    }
+
     private Dictionary<string, string> Details
     {
         get
@@ -324,8 +366,9 @@
     .modal-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
         margin-bottom: 20px;
+        padding-right: 72px;
     }
 
     .modal-close {
@@ -391,6 +434,7 @@
         }
 
     .detail-modal-box {
+        position: relative;
         width: fit-content;
         min-width: 480px;
         max-width: 94vw;
@@ -398,7 +442,7 @@
         overflow-y: auto;
         background: white;
         border-radius: 24px;
-        padding: 24px;
+        padding: 52px 24px 24px;
         box-shadow: 0 25px 60px rgba(0,0,0,.18);
     }
 
@@ -438,5 +482,93 @@
             font-weight: 800;
             text-align: center;
         }
+
+    .detail-floating-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 38px;
+        height: 38px;
+        border: none;
+        border-radius: 12px;
+        background: #f3e8ff;
+        color: #7c3aed;
+        font-size: 24px;
+        font-weight: 900;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .detail-note-badge {
+        padding: 6px 14px;
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        max-width: 220px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,.04);
+    }
+
+    .header-right {
+        position: absolute;
+        top: 72px;
+        right: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .detail-status-box {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+    }
+
+    .status-active,
+    .status-ready,
+    .status-problem {
+        padding: 7px 16px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        border: 1px solid transparent;
+    }
+
+    /* ใช้งานอยู่ */
+    .status-active {
+        background: #dcfce7;
+        color: #166534;
+        border-color: #bbf7d0;
+    }
+
+    /* พร้อมใช้งาน */
+    .status-ready {
+        background: #dbeafe;
+        color: #1d4ed8;
+        border-color: #bfdbfe;
+    }
+
+    /* มีปัญหา */
+    .status-problem {
+        background: #fee2e2;
+        color: #dc2626;
+        border-color: #fecaca;
+    }
 
 </style>

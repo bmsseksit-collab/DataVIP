@@ -137,6 +137,7 @@
                         <th>ชื่อบัญชี</th>
                         <th>เลขที่บัญชี</th>
                         <th>วันที่รับบัญชี</th>
+                        <th>สถานะ</th>
                         <th>รายละเอียด</th>
                         <th>จัดการ</th>
                     </tr>
@@ -147,7 +148,7 @@
                     @if (isLoading)
                     {
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 กำลังโหลดข้อมูล...
                             </td>
                         </tr>
@@ -155,7 +156,7 @@
                     else if (!string.IsNullOrWhiteSpace(loadError))
                     {
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 Error: @loadError
                             </td>
                         </tr>
@@ -163,7 +164,7 @@
                     else if (!FilteredAccounts.Any())
                     {
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 ยังไม่มีข้อมูลบัญชี
                             </td>
                         </tr>
@@ -191,6 +192,11 @@
                                 <td>@item.AccountNumber</td>
 
                                 <td>@GetDetailDate(item, "ReceivedDate")</td>
+                                <td>
+                                    <span class="@GetStatusClass(item.Status)">
+                                        @item.Status
+                                    </span>
+                                </td>
 
                                 <td>
                                     <button class="detail-btn"
@@ -280,6 +286,15 @@
                     <option>KKP นิติ</option>
 
                 </select>
+
+                <select @bind="newAccount.Status">
+                    <option>ใช้งานอยู่</option>
+                    <option>พร้อมใช้งาน</option>
+                    <option>มีปัญหา</option>
+                </select>
+
+                <input placeholder="หมายเหตุสถานะ"
+                       @bind="newAccount.StatusNote" />
 
                 @if (newAccount.AccountType == "SCB นิติ")
                 {
@@ -485,6 +500,17 @@
     private string oldGroupName = "";
     private string editGroupName = "";
 
+    private string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "ใช้งานอยู่" => "status-active",
+            "พร้อมใช้งาน" => "status-ready",
+            "มีปัญหา" => "status-problem",
+            _ => "status-ready"
+        };
+    }
+
     private async Task SaveEditGroupName()
     {
         if (isSavingGroupEdit)
@@ -585,6 +611,8 @@
             AccountNumber = account.AccountNumber,
             Branch = account.Branch,
             Note = account.Note,
+            Status = account.Status,
+            StatusNote = account.StatusNote,
             DetailsJson = account.DetailsJson
         };
 
@@ -932,7 +960,9 @@
             OwnerName = "",
             AccountNumber = "",
             Branch = "",
-            Note = ""
+            Note = "",
+            Status = "พร้อมใช้งาน",
+            StatusNote = ""
         };
 
         showAddModal = true;
@@ -1046,6 +1076,13 @@
             AccountNumber = newAccount.AccountNumber.Trim(),
             Branch = newAccount.Branch?.Trim() ?? "",
             Note = newAccount.Note?.Trim() ?? "",
+
+            Status = string.IsNullOrWhiteSpace(newAccount.Status)
+                ? "พร้อมใช้งาน"
+                : newAccount.Status,
+
+                StatusNote = newAccount.StatusNote?.Trim() ?? "",
+
             DetailsJson = JsonSerializer.Serialize(detailsFields)
         };
 
@@ -1053,22 +1090,27 @@
         // EDIT MODE
         // =========================
 
-            if (isEditMode && editingAccount != null)
-            {
-                accountToInsert.Id = editingAccount.Id;
+        if (isEditMode && editingAccount != null)
+        {
+            accountToInsert.Id = editingAccount.Id;
 
-                await SupabaseService.Client
-                    .From<BankAccount>()
-                    .Update(accountToInsert);
-            }
-            else
-            {
-                accountToInsert.Id = Guid.NewGuid();
+            await SupabaseService.Client
+                .From<BankAccount>()
+                .Update(accountToInsert);
+        }
 
-                await SupabaseService.Client
-                    .From<BankAccount>()
-                    .Insert(accountToInsert);
-            }
+        // =========================
+        // ADD MODE
+        // =========================
+
+        else
+        {
+            accountToInsert.Id = Guid.NewGuid();
+
+            await SupabaseService.Client
+                .From<BankAccount>()
+                .Insert(accountToInsert);
+        }
 
         await LoadData();
 
@@ -1076,6 +1118,7 @@
 
         newAccount = new BankAccount();
         newAccount.AccountType = "";
+        newAccount.Status = "พร้อมใช้งาน";
 
         detailsFields.Clear();
 
