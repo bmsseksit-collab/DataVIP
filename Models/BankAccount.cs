@@ -9,6 +9,9 @@ namespace DataVipWeb.Models
         [PrimaryKey("id", false)]
         public Guid Id { get; set; }
 
+        [Column("details")]
+        public string DetailsJson { get; set; } = "{}";
+
         [Column("group_name")]
         public string GroupName { get; set; } = "";
 

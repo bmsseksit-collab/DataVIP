@@ -1,0 +1,96 @@
+﻿@using DataVipWeb.Models
+
+<div class="form-section-title">
+    ข้อมูลหลักบัญชี
+</div>
+
+
+    <input placeholder="ชื่อบัญชี"
+           @bind="Account.AccountName" />
+
+    <input placeholder="ชื่อเจ้าของบัญชี"
+           @bind="Account.OwnerName" />
+
+    <input placeholder="เลขบัตรประชาชน"
+           value="@GetDetailValue("CitizenId")"
+           @oninput='e => SetDetailValue("CitizenId", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="วันเกิด"
+           value="@GetDetailValue("BirthDate")"
+           @oninput='e => SetDetailValue("BirthDate", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="เลขที่บัญชี"
+           @bind="Account.AccountNumber" />
+
+    <input placeholder="สาขา"
+           @bind="Account.Branch" />
+
+    <input placeholder="ทะเบียนนิติบุคคลเลขที่"
+           value="@GetDetailValue("CompanyNo")"
+           @oninput='e => SetDetailValue("CompanyNo", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="SCB Digital Token PIN"
+           value="@GetDetailValue("TokenPin")"
+           @oninput='e => SetDetailValue("TokenPin", e.Value?.ToString() ?? "")' />
+
+    <div class="phone-row">
+        <select value="@GetDetailValue("PhoneNetwork")"
+                @onchange='e => SetDetailValue("PhoneNetwork", e.Value?.ToString() ?? "")'>
+            <option value="">เครือข่าย</option>
+            <option value="AIS">AIS</option>
+            <option value="DTAC">DTAC</option>
+            <option value="TRUE">TRUE</option>
+            <option value="รายเดือน">รายเดือน</option>
+        </select>
+
+        <input placeholder="เบอร์โทร"
+               value="@GetDetailValue("Phone")"
+               @oninput='e => SetDetailValue("Phone", e.Value?.ToString() ?? "")' />
+    </div>
+
+    <input placeholder="วันหมดอายุซิม"
+           value="@GetDetailValue("SimExpire")"
+           @oninput='e => SetDetailValue("SimExpire", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="SCB Username"
+           value="@GetDetailValue("ScbUser")"
+           @oninput='e => SetDetailValue("ScbUser", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="SCB Password"
+           value="@GetDetailValue("ScbPass")"
+           @oninput='e => SetDetailValue("ScbPass", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="Email"
+           value="@GetDetailValue("Email")"
+           @oninput='e => SetDetailValue("Email", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="Email Password"
+           value="@GetDetailValue("EmailPass")"
+           @oninput='e => SetDetailValue("EmailPass", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="รหัส APP"
+           value="@GetDetailValue("AppCode")"
+           @oninput='e => SetDetailValue("AppCode", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="ที่อยู่"
+           value="@GetDetailValue("Address")"
+           @oninput='e => SetDetailValue("Address", e.Value?.ToString() ?? "")' />
+
+    <div class="date-input-box">
+        <span class="date-label">วันที่รับบัญชี</span>
+
+        <input type="date"
+               class="date-input"
+               value="@GetDetailValue("ReceivedDate")"
+               @oninput='e => SetDetailValue("ReceivedDate", e.Value?.ToString() ?? DateTime.Today.ToString("yyyy-MM-dd"))' />
+    </div>
+
+    <input placeholder="วันที่ปล่อยใช้งาน"
+           value="@GetDetailValue("ReleasedDate")"
+           @oninput='e => SetDetailValue("ReleasedDate", e.Value?.ToString() ?? "")' />
+
+@code {
+    [Parameter] public BankAccount Account { get; set; } = new();
+    [Parameter] public Func<string, string> GetDetailValue { get; set; } = default!;
+    [Parameter] public Action<string, string> SetDetailValue { get; set; } = default!;
+}

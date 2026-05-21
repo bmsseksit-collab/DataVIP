@@ -1,6 +1,8 @@
 ﻿@page "/banks"
+@using DataVipWeb.Components.Pages.BankForms
 @using DataVipWeb.Models
 @using DataVipWeb.Services
+@using System.Text.Json
 
 @inject SupabaseService SupabaseService
 @inject NavigationManager Nav
@@ -18,14 +20,6 @@
                    placeholder="ค้นหาบัญชี..."
                    @bind="searchText"
                    @bind:event="oninput" />
-
-            <select class="group-filter" @bind="selectedGroup">
-                <option value="">ทุกกลุ่มบัญชี</option>
-                @foreach (var group in Groups)
-                {
-                    <option value="@group">@group</option>
-                }
-            </select>
 
             <button class="add-btn" @onclick="OpenAddModal">
                 + เพิ่มบัญชี
@@ -79,10 +73,36 @@
 
         <div class="group-cards">
 
+            <div class="group-card @(string.IsNullOrWhiteSpace(selectedGroup) ? "active" : "")"
+                 @onclick="() => selectedGroup = string.Empty">
+
+                <div class="group-icon">📋</div>
+
+                <div>
+                    <b>บัญชีทั้งหมด</b>
+                    <h1>@bankAccounts.Count</h1>
+                    <p>บัญชี</p>
+                </div>
+
+            </div>
+
             @foreach (var group in Groups)
             {
                 <div class="group-card @(selectedGroup == group ? "active" : "")"
                      @onclick="() => selectedGroup = group">
+
+                    <button class="delete-group-btn"
+                            @onclick:stopPropagation="true"
+                            @onclick="() => ConfirmDeleteGroup(group)"
+                            title="ลบสายบัญชี">
+                        🗑
+                    </button>
+
+                    <button class="edit-group-btn"
+                            @onclick:stopPropagation="true"
+                            @onclick="() => OpenEditGroupModal(group)">
+                        ✎
+                    </button>
 
                     <div class="group-icon">🏦</div>
 
@@ -95,7 +115,8 @@
                 </div>
             }
 
-            <div class="group-card add-group-card">
+            <div class="group-card add-group-card"
+                 @onclick="OpenAddGroupModal">
                 <div class="plus-icon">+</div>
                 <b>เพิ่มสายบัญชี</b>
             </div>
@@ -161,7 +182,7 @@
                                 <td>
                                     <div class="bank-name">
                                         <span class="bank-logo">🏦</span>
-                                        @item.BankName
+                                        @item.AccountType
                                     </div>
                                 </td>
 
@@ -169,7 +190,7 @@
 
                                 <td>@item.AccountNumber</td>
 
-                                <td>-</td>
+                                <td>@GetDetailDate(item, "ReceivedDate")</td>
 
                                 <td>
                                     <button class="detail-btn"
@@ -179,11 +200,13 @@
                                 </td>
 
                                 <td>
-                                    <button class="icon-btn edit">
+                                    <button class="icon-btn edit"
+                                            @onclick="() => OpenEditModal(item)">
                                         ✎
                                     </button>
 
-                                    <button class="icon-btn delete">
+                                    <button class="icon-btn delete"
+                                            @onclick="() => ConfirmDelete(item)">
                                         🗑
                                     </button>
                                 </td>
@@ -204,74 +227,89 @@
 
 </div>
 
-@if (selectedAccount != null)
-{
-    <div class="detail-panel">
+<BankDetailPanel Account="selectedAccount"
+                 OnClose="CloseDetail" />
 
-        <div class="detail-header">
-            <h2>รายละเอียดบัญชี</h2>
-            <button @onclick="CloseDetail">×</button>
-        </div>
-
-        <div class="bank-logo-big">🏦</div>
-
-        <h3>@selectedAccount.BankName</h3>
-        <p>สายบัญชี: <b>@selectedAccount.GroupName</b></p>
-
-        <div class="detail-list">
-            <p><span>ชื่อบัญชี</span> <b>@selectedAccount.AccountName</b></p>
-            <p><span>เลขที่บัญชี</span> <b>@selectedAccount.AccountNumber</b></p>
-            <p><span>ประเภทบัญชี</span> <b>@selectedAccount.AccountType</b></p>
-            <p><span>สาขา</span> <b>@selectedAccount.Branch</b></p>
-            <p><span>หมายเหตุ</span> <b>@selectedAccount.Note</b></p>
-            <p><span>วันที่เพิ่ม</span> <b>-</b></p>
-        </div>
-
-        <button class="close-detail-btn" @onclick="CloseDetail">
-            ปิด
-        </button>
-
-    </div>
-}
 @if (showAddModal)
 {
     <div class="modal-overlay">
         <div class="modal-box large-modal">
 
             <div class="modal-header">
-                <h2>เพิ่มบัญชีธนาคาร</h2>
+                <h2>@(isEditMode ? "แก้ไขบัญชีธนาคาร" : "เพิ่มบัญชีธนาคาร")</h2>
                 <button class="modal-close" @onclick="CloseAddModal">×</button>
             </div>
 
             <div class="modal-grid">
 
-                <input placeholder="สายบัญชี เช่น สาย 1"
-                       @bind="newAccount.GroupName" />
+                <select @bind="newAccount.GroupName">
+                    <option value="">เลือกสายบัญชี</option>
 
-                <select @bind="newAccount.AccountType">
-                    <option>SCB บุคคล</option>
-                    <option>SCB นิติ</option>
-                    <option>KTB บุคคล</option>
-                    <option>KTB นิติ</option>
+                    @foreach (var group in Groups)
+                    {
+                        <option value="@group">@group</option>
+                    }
                 </select>
 
-                <input placeholder="ธนาคาร"
-                       @bind="newAccount.BankName" />
+                <select value="@newAccount.AccountType"
+                        @onchange="OnAccountTypeChanged">
 
-                <input placeholder="ชื่อบัญชี"
-                       @bind="newAccount.AccountName" />
+                    <option value="">เลือกประเภทบัญชี</option>
 
-                <input placeholder="ชื่อเจ้าของบัญชี"
-                       @bind="newAccount.OwnerName" />
+                    <option>SCB บุคคล</option>
+                    <option>SCB นิติ</option>
 
-                <input placeholder="เลขที่บัญชี"
-                       @bind="newAccount.AccountNumber" />
+                    <option>KBANK บุคคล</option>
+                    <option>KBANK นิติ</option>
 
-                <input placeholder="สาขา"
-                       @bind="newAccount.Branch" />
+                    <option>GSB บุคคล</option>
+                    <option>GSB นิติ</option>
 
-                <input placeholder="หมายเหตุ"
-                       @bind="newAccount.Note" />
+                    <option>TTB นิติ</option>
+
+                    <option>KTB บุคคล</option>
+                    <option>KTB นิติ</option>
+
+                    <option>BAY บุคคล</option>
+                    <option>BAY นิติ</option>
+
+                    <option>BBL บุคคล</option>
+
+                    <option>BAAC บุคคล</option>
+
+                    <option>KKP นิติ</option>
+
+                </select>
+
+                @if (newAccount.AccountType == "SCB นิติ")
+                {
+                    <CorporateScbForm Account="newAccount"
+                                      GetDetailValue="GetDetailValue"
+                                      SetDetailValue="SetDetailValue" />
+                }
+
+                @if (IsDualApprovalBank(newAccount.AccountType))
+                {
+                    <DualApprovalForm Account="newAccount"
+                                      AccountType="newAccount.AccountType"
+                                      GetDetailValue="GetDetailValue"
+                                      SetDetailValue="SetDetailValue" />
+                }
+                
+                @if (IsPersonalBank(newAccount.AccountType))
+                {
+                    <PersonalBankForm Account="newAccount"
+                                      GetDetailValue="GetDetailValue"
+                                      SetDetailValue="SetDetailValue" />
+                }
+
+                @if (IsBizBank(newAccount.AccountType))
+                {
+                    <BizBankForm Account="newAccount"
+                                 AccountType="newAccount.AccountType"
+                                 GetDetailValue="GetDetailValue"
+                                 SetDetailValue="SetDetailValue" />
+                }
 
             </div>
 
@@ -283,7 +321,36 @@
                 <button class="save-btn"
                         disabled="@isSaving"
                         @onclick="SaveAccount">
-                    @(isSaving ? "กำลังบันทึก..." : "บันทึก")
+                    @(isSaving ? "กำลังบันทึก..." : isEditMode ? "บันทึกการแก้ไข" : "บันทึก")
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@if (showAddGroupModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-box">
+
+            <div class="modal-header">
+                <h2>เพิ่มสายบัญชี</h2>
+                <button class="modal-close" @onclick="CloseAddGroupModal">×</button>
+            </div>
+
+            <div class="modal-grid one-column">
+                <input placeholder="เช่น สาย 1, สาย VIP, สาย SCB"
+                       @bind="newGroupName" />
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel-btn" @onclick="CloseAddGroupModal">
+                    ยกเลิก
+                </button>
+
+                <button class="save-btn" @onclick="SaveGroupName">
+                    บันทึกสายบัญชี
                 </button>
             </div>
 
@@ -296,8 +363,106 @@
         @warningMessage
     </div>
 }
+@if (showDeleteModal)
+{
+    <div class="modal-overlay">
+        <div class="delete-modal">
+
+            <h2>ยืนยันการลบ</h2>
+
+            <p>
+                ต้องการลบบัญชีนี้ใช่หรือไม่?
+            </p>
+
+            <div class="delete-actions">
+
+                <button class="cancel-btn"
+                        @onclick="CancelDelete">
+                    ยกเลิก
+                </button>
+
+                <button class="confirm-delete-btn"
+                        disabled="@isDeleting"
+                        @onclick="DeleteConfirmed">
+                    @(isDeleting ? "กำลังลบ..." : "ลบข้อมูล")
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+}
+@if (showDeleteGroupModal)
+{
+    <div class="modal-overlay">
+        <div class="delete-modal">
+
+            <h2>ยืนยันการลบสายบัญชี</h2>
+
+            <p>
+                ต้องการลบสายบัญชี <b>@groupToDelete</b> ใช่หรือไม่?<br />
+                บัญชีในสายนี้จะไม่ถูกลบ แต่จะกลายเป็นบัญชีที่ไม่มีสาย
+            </p>
+
+            <div class="delete-actions">
+
+                <button class="cancel-btn"
+                        @onclick="CancelDeleteGroup">
+                    ยกเลิก
+                </button>
+
+                <button class="confirm-delete-btn"
+                        disabled="@isDeletingGroup"
+                        @onclick="DeleteGroupConfirmed">
+
+                    @(isDeletingGroup ? "กำลังลบ..." : "ลบสายบัญชี")
+
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+}
+@if (showEditGroupModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-box">
+
+            <div class="modal-header">
+                <h2>แก้ไขชื่อสายบัญชี</h2>
+                <button class="modal-close" @onclick="CloseEditGroupModal">×</button>
+            </div>
+
+            <div class="modal-grid one-column">
+                <input placeholder="ชื่อสายบัญชี"
+                       @bind="editGroupName" />
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel-btn" @onclick="CloseEditGroupModal">
+                    ยกเลิก
+                </button>
+
+                <button class="save-btn"
+                        disabled="@isSavingGroupEdit"
+                        @onclick="SaveEditGroupName">
+                    @(isSavingGroupEdit ? "กำลังบันทึก..." : "บันทึกการแก้ไข")
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
 
 @code {
+    private Dictionary<string, string> detailsFields = new();
+    private bool showDeleteGroupModal = false;
+    private bool isDeletingGroup = false;
+    private bool showDeleteModal = false;
+    private string groupToDelete = "";
+    private bool isDeleting = false;
+    private BankAccount? accountToDelete;
     private string searchText = "";
     private string selectedGroup = "";
     private BankAccount? selectedAccount;
@@ -307,18 +472,467 @@
     private string loadError = "";
 
     private bool showAddModal = false;
+    private bool showAddGroupModal = false;
+    private string newGroupName = "";
     private bool isSaving = false;
     private string warningMessage = "";
-
+    private List<BankGroup> bankGroups = new();
+    private bool isEditMode = false;
+    private BankAccount? editingAccount;
     private BankAccount newAccount = new();
+    private bool showEditGroupModal = false;
+    private bool isSavingGroupEdit = false;
+    private string oldGroupName = "";
+    private string editGroupName = "";
+
+    private async Task SaveEditGroupName()
+    {
+        if (isSavingGroupEdit)
+            return;
+
+        if (string.IsNullOrWhiteSpace(editGroupName))
+        {
+            warningMessage = "กรุณากรอกชื่อสายบัญชี";
+            return;
+        }
+
+        var newName = editGroupName.Trim();
+
+        if (newName == oldGroupName)
+        {
+            CloseEditGroupModal();
+            return;
+        }
+
+        if (Groups.Contains(newName))
+        {
+            warningMessage = "มีสายบัญชีนี้อยู่แล้ว";
+            return;
+        }
+
+        isSavingGroupEdit = true;
+        warningMessage = "";
+
+        try
+        {
+            var group = bankGroups.FirstOrDefault(x => x.GroupName == oldGroupName);
+
+            if (group != null)
+            {
+                group.GroupName = newName;
+
+                await SupabaseService.Client
+                    .From<BankGroup>()
+                    .Update(group);
+            }
+
+            var accountsInGroup = bankAccounts
+                .Where(x => x.GroupName == oldGroupName)
+                .ToList();
+
+            foreach (var account in accountsInGroup)
+            {
+                account.GroupName = newName;
+
+                await SupabaseService.Client
+                    .From<BankAccount>()
+                    .Update(account);
+            }
+
+            if (selectedGroup == oldGroupName)
+                selectedGroup = newName;
+
+            CloseEditGroupModal();
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            warningMessage = "❌ " + ex.Message;
+        }
+        finally
+        {
+            isSavingGroupEdit = false;
+        }
+    }
+    private void OpenEditGroupModal(string groupName)
+    {
+        oldGroupName = groupName;
+        editGroupName = groupName;
+        showEditGroupModal = true;
+    }
+
+    private void CloseEditGroupModal()
+    {
+        showEditGroupModal = false;
+        oldGroupName = "";
+        editGroupName = "";
+    }
+    private void OpenEditModal(BankAccount account)
+    {
+        warningMessage = "";
+        isEditMode = true;
+        editingAccount = account;
+
+        newAccount = new BankAccount
+        {
+            Id = account.Id,
+            GroupName = account.GroupName,
+            BankName = account.BankName,
+            AccountType = account.AccountType,
+            AccountName = account.AccountName,
+            OwnerName = account.OwnerName,
+            AccountNumber = account.AccountNumber,
+            Branch = account.Branch,
+            Note = account.Note,
+            DetailsJson = account.DetailsJson
+        };
+
+        try
+        {
+            detailsFields = JsonSerializer.Deserialize<Dictionary<string, string>>(account.DetailsJson)
+                            ?? new Dictionary<string, string>();
+        }
+        catch
+        {
+            detailsFields = new Dictionary<string, string>();
+        }
+
+        showAddModal = true;
+    }
+
+    private string GetDetailDate(BankAccount account, string key)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(account.DetailsJson))
+                return "-";
+
+            var details = JsonSerializer.Deserialize<Dictionary<string, string>>(account.DetailsJson);
+
+            if (details == null || !details.ContainsKey(key))
+                return "-";
+
+            var value = details[key];
+
+            if (DateTime.TryParse(value, out var date))
+                return FormatThaiDate(date);
+
+            return string.IsNullOrWhiteSpace(value) ? "-" : value;
+        }
+        catch
+        {
+            return "-";
+        }
+    }
+
+    private void OnAccountTypeChanged(ChangeEventArgs e)
+    {
+        newAccount.AccountType = e.Value?.ToString() ?? "";
+
+        newAccount.AccountName = "";
+        newAccount.OwnerName = "";
+        newAccount.AccountNumber = "";
+        newAccount.Branch = "";
+        newAccount.Note = "";
+
+        ResetFormByType();
+    }
+
+    private string GetDetailValue(string key)
+    {
+        return detailsFields.ContainsKey(key) ? detailsFields[key] : "";
+    }
+
+    private void SetDetailValue(string key, string value)
+    {
+        detailsFields[key] = value;
+    }
+
+    private string GetBankNameFromAccountType(string accountType)
+    {
+        if (accountType.StartsWith("SCB"))
+            return "SCB";
+
+        if (accountType.StartsWith("KTB"))
+            return "KTB";
+
+        return accountType;
+    }
+    private bool IsPersonalBank(string type)
+    {
+        return type == "SCB บุคคล"
+            || type == "KTB บุคคล"
+            || type == "BAY บุคคล"
+            || type == "GSB บุคคล"
+            || type == "BAAC บุคคล"
+            || type == "BBL บุคคล";
+    }
+
+    private bool IsBizBank(string type)
+    {
+        return type == "KBANK บุคคล"
+            || type == "KBANK นิติ"
+            || type == "BAY นิติ"
+            || type == "KTB นิติ"
+            || type == "TTB นิติ";
+    }
+
+    private bool IsDualApprovalBank(string type)
+    {
+        return type == "GSB นิติ"
+            || type == "KKP นิติ";
+    }
+    private void ResetFormByType()
+    {
+        detailsFields.Clear();
+
+        if (newAccount.AccountType == "SCB นิติ")
+        {   
+            detailsFields["CitizenId"] = "";
+            detailsFields["BirthDate"] = "";
+            detailsFields["CompanyNo"] = "";
+            detailsFields["TokenPin"] = "";
+            detailsFields["PhoneNetwork"] = "";
+            detailsFields["Phone"] = "";
+            detailsFields["SimExpire"] = "";
+            detailsFields["ScbUser"] = "";
+            detailsFields["ScbPass"] = "";
+            detailsFields["Email"] = "";
+            detailsFields["EmailPass"] = "";
+            detailsFields["AppCode"] = "";
+            detailsFields["Address"] = "";
+            detailsFields["ReceivedDate"] = DateTime.Today.ToString("yyyy-MM-dd");
+            detailsFields["ReleasedDate"] = "";
+        }
+
+        if (IsPersonalBank(newAccount.AccountType) ||
+            IsBizBank(newAccount.AccountType))
+{
+            detailsFields["PhoneNetwork"] = "";
+            detailsFields["BookBank"] = "";
+            detailsFields["ReceivedDate"] = DateTime.Today.ToString("yyyy-MM-dd");
+            detailsFields["ReleasedDate"] = "";
+            detailsFields["CitizenId"] = "";
+            detailsFields["BirthDate"] = "";
+            detailsFields["AtmNumber"] = "";
+            detailsFields["AtmPin"] = "";
+            detailsFields["Phone"] = "";
+            detailsFields["SimExpire"] = "";
+            detailsFields["Limit"] = "";
+            detailsFields["Email"] = "";
+            detailsFields["EmailPass"] = "";
+            detailsFields["AppCode"] = "";
+            detailsFields["Address"] = "";
+            detailsFields["ReceivedDate"] = DateTime.Today.ToString("yyyy-MM-dd");
+            detailsFields["ReleasedDate"] = "";
+        }
+
+        if (IsDualApprovalBank(newAccount.AccountType))
+        {
+            detailsFields["CitizenId"] = "";
+            detailsFields["BirthDate"] = "";
+            detailsFields["CompanyNo"] = "";
+
+            detailsFields["MakerPhoneNetwork"] = "";
+            detailsFields["MakerPhone"] = "";
+            detailsFields["MakerSimExpire"] = "";
+            detailsFields["MakerEmail"] = "";
+            detailsFields["MakerEmailPass"] = "";
+            detailsFields["MakerUser"] = "";
+            detailsFields["MakerPass"] = "";
+            detailsFields["MakerCompanyCode"] = "";
+
+            detailsFields["ApproverPhoneNetwork"] = "";
+            detailsFields["ApproverPhone"] = "";
+            detailsFields["ApproverSimExpire"] = "";
+            detailsFields["ApproverEmail"] = "";
+            detailsFields["ApproverEmailPass"] = "";
+            detailsFields["ApproverUser"] = "";
+            detailsFields["ApproverPass"] = "";
+            detailsFields["ApproverCompanyCode"] = "";
+
+            detailsFields["AppCode"] = "";
+            detailsFields["Address"] = "";
+            detailsFields["ReceivedDate"] = DateTime.Today.ToString("yyyy-MM-dd");
+            detailsFields["ReleasedDate"] = "";
+        }
+    }
+
+    private void ConfirmDelete(BankAccount account)
+    {
+        accountToDelete = account;
+        showDeleteModal = true;
+    }
+
+    private void CancelDelete()
+    {
+        accountToDelete = null;
+        showDeleteModal = false;
+    }
+
+    private void ConfirmDeleteGroup(string groupName)
+    {
+        groupToDelete = groupName;
+        showDeleteGroupModal = true;
+    }
+
+    private void CancelDeleteGroup()
+    {
+        groupToDelete = "";
+        showDeleteGroupModal = false;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (isDeleting)
+            return;
+
+        if (accountToDelete == null)
+            return;
+
+        isDeleting = true;
+
+        try
+        {
+            await SupabaseService.Client
+                .From<BankAccount>()
+                .Delete(accountToDelete);
+
+            await LoadData();
+
+            accountToDelete = null;
+            showDeleteModal = false;
+        }
+        catch (Exception ex)
+        {
+            warningMessage = "❌ " + ex.Message;
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+    private async Task DeleteGroupConfirmed()
+    {
+        if (isDeletingGroup)
+            return;
+
+        if (string.IsNullOrWhiteSpace(groupToDelete))
+            return;
+
+        isDeletingGroup = true;
+        warningMessage = "";
+
+        try
+        {
+            var accountsInGroup = bankAccounts
+                .Where(x => x.GroupName == groupToDelete)
+                .ToList();
+
+            foreach (var account in accountsInGroup)
+            {
+                account.GroupName = "";
+
+                await SupabaseService.Client
+                    .From<BankAccount>()
+                    .Update(account);
+            }
+
+            var group = bankGroups
+                .FirstOrDefault(x => x.GroupName == groupToDelete);
+
+            if (group != null)
+            {
+                await SupabaseService.Client
+                    .From<BankGroup>()
+                    .Delete(group);
+            }
+
+            selectedGroup = "";
+
+            groupToDelete = "";
+            showDeleteGroupModal = false;
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            warningMessage = "❌ " + ex.Message;
+        }
+        finally
+        {
+            isDeletingGroup = false;
+        }
+    }
+
+    private void OpenAddGroupModal()
+    {
+        newGroupName = "";
+        showAddGroupModal = true;
+    }
+
+    private void CloseAddGroupModal()
+    {
+        showAddGroupModal = false;
+    }
+
+    private async Task SaveGroupName()
+    {
+        if (string.IsNullOrWhiteSpace(newGroupName))
+        {
+            warningMessage = "กรุณากรอกชื่อสายบัญชี";
+            return;
+        }
+
+        var groupName = newGroupName.Trim();
+
+        if (Groups.Contains(groupName))
+        {
+            warningMessage = "มีสายบัญชีนี้อยู่แล้ว";
+            return;
+        }
+
+        try
+        {
+            var group = new BankGroup
+            {
+                GroupName = groupName
+            };
+
+            await SupabaseService.Client
+                .From<BankGroup>()
+                .Insert(group);
+
+            await LoadData();
+
+            showAddGroupModal = false;
+            newGroupName = "";
+        }
+        catch (Exception ex)
+        {
+            warningMessage = "❌ " + ex.Message;
+        }
+    }
 
     private void OpenAddModal()
     {
+        warningMessage = "";
+        detailsFields.Clear();
+
+        isEditMode = false;
+        editingAccount = null;
+
         newAccount = new BankAccount
         {
             GroupName = "",
-            BankName = "SCB",
-            AccountType = "SCB บุคคล"
+            BankName = "",
+            AccountType = "",
+            AccountName = "",
+            OwnerName = "",
+            AccountNumber = "",
+            Branch = "",
+            Note = ""
         };
 
         showAddModal = true;
@@ -327,14 +941,18 @@
     private void CloseAddModal()
     {
         showAddModal = false;
+        isEditMode = false;
+        editingAccount = null;
+        detailsFields.Clear();
     }
 
     private List<string> Groups =>
-        bankAccounts
-            .Select(x => x.GroupName)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
+    bankGroups
+        .Select(x => x.GroupName)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()
+        .OrderBy(x => x)
+        .ToList();
 
     private IEnumerable<BankAccount> FilteredAccounts =>
         bankAccounts.Where(x =>
@@ -378,6 +996,12 @@
                 .Get();
 
             bankAccounts = result.Models ?? new List<BankAccount>();
+
+            var groupResult = await SupabaseService.Client
+                .From<BankGroup>()
+                .Get();
+
+            bankGroups = groupResult.Models ?? new List<BankGroup>();
         }
         catch (Exception ex)
         {
@@ -390,12 +1014,13 @@
     }
 
     private async Task SaveAccount()
-    {
+{
     if (isSaving)
         return;
 
+    warningMessage = "";
+
     if (string.IsNullOrWhiteSpace(newAccount.GroupName) ||
-        string.IsNullOrWhiteSpace(newAccount.BankName) ||
         string.IsNullOrWhiteSpace(newAccount.AccountType) ||
         string.IsNullOrWhiteSpace(newAccount.AccountName) ||
         string.IsNullOrWhiteSpace(newAccount.AccountNumber))
@@ -408,20 +1033,64 @@
 
     try
     {
-        await SupabaseService.Client
-            .From<BankAccount>()
-            .Insert(newAccount);
+        var bankName = GetBankNameFromAccountType(newAccount.AccountType);
+
+        var accountToInsert = new BankAccount
+        {
+            Id = newAccount.Id,
+            GroupName = newAccount.GroupName.Trim(),
+            BankName = bankName,
+            AccountType = newAccount.AccountType.Trim(),
+            AccountName = newAccount.AccountName.Trim(),
+            OwnerName = newAccount.OwnerName?.Trim() ?? "",
+            AccountNumber = newAccount.AccountNumber.Trim(),
+            Branch = newAccount.Branch?.Trim() ?? "",
+            Note = newAccount.Note?.Trim() ?? "",
+            DetailsJson = JsonSerializer.Serialize(detailsFields)
+        };
+
+        // =========================
+        // EDIT MODE
+        // =========================
+
+            if (isEditMode && editingAccount != null)
+            {
+                accountToInsert.Id = editingAccount.Id;
+
+                await SupabaseService.Client
+                    .From<BankAccount>()
+                    .Update(accountToInsert);
+            }
+            else
+            {
+                accountToInsert.Id = Guid.NewGuid();
+
+                await SupabaseService.Client
+                    .From<BankAccount>()
+                    .Insert(accountToInsert);
+            }
 
         await LoadData();
 
         showAddModal = false;
+
         newAccount = new BankAccount();
+        newAccount.AccountType = "";
+
+        detailsFields.Clear();
+
+        isEditMode = false;
+        editingAccount = null;
+    }
+    catch (Exception ex)
+    {
+        warningMessage = "❌ " + ex.Message;
     }
     finally
     {
         isSaving = false;
     }
-    }
+}
     
     private string FormatThaiDate(DateTime date)
     {
@@ -437,541 +1106,3 @@
 
     
 }
-<style>
-    .bank-page {
-        position: relative;
-    }
-
-    .bank-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 18px;
-        margin-bottom: 26px;
-    }
-
-    .page-title {
-        margin: 0;
-        font-size: 36px;
-        font-weight: 900;
-        color: #1e1b4b;
-    }
-
-    .page-subtitle {
-        margin: 6px 0 0;
-        color: #7c7c95;
-        font-size: 14px;
-        font-weight: 600;
-    }
-
-    .header-actions {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-
-    .search-box,
-    .group-filter {
-        height: 48px;
-        border: 1px solid #eadfff;
-        border-radius: 14px;
-        padding: 0 16px;
-        outline: none;
-        background: white;
-        box-shadow: 0 8px 24px rgba(124,58,237,.08);
-        font-weight: 700;
-        color: #4b3b78;
-    }
-
-    .search-box {
-        width: 230px;
-    }
-
-    .group-filter {
-        width: 180px;
-    }
-
-    .add-btn {
-        height: 48px;
-        border: none;
-        border-radius: 14px;
-        padding: 0 22px;
-        background: linear-gradient(90deg,#6d28ff,#9333ea);
-        color: white;
-        font-weight: 800;
-        cursor: pointer;
-        box-shadow: 0 10px 25px rgba(124,58,237,.28);
-    }
-
-    .summary-cards {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 18px;
-        margin-bottom: 26px;
-    }
-
-    .summary-card {
-        height: 118px;
-        border-radius: 20px;
-        padding: 22px;
-        color: white;
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        box-shadow: 0 15px 35px rgba(0,0,0,.08);
-        overflow: hidden;
-        position: relative;
-    }
-
-    .summary-icon {
-        width: 58px;
-        height: 58px;
-        border-radius: 50%;
-        background: rgba(255,255,255,.18);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 26px;
-    }
-
-    .summary-card p {
-        margin: 0;
-        font-weight: 800;
-    }
-
-    .summary-card h1 {
-        margin: 4px 0;
-        font-size: 38px;
-        font-weight: 900;
-    }
-
-    .summary-card span {
-        font-weight: 700;
-    }
-
-    .purple-card {
-        background: linear-gradient(135deg,#6d28ff,#a855f7);
-    }
-
-    .blue-card {
-        background: linear-gradient(135deg,#2563eb,#3b82f6);
-    }
-
-    .orange-card {
-        background: linear-gradient(135deg,#f97316,#fb923c);
-    }
-
-    .green-card {
-        background: linear-gradient(135deg,#059669,#10b981);
-    }
-
-    .group-box,
-    .table-box {
-        background: rgba(255,255,255,.78);
-        border: 1px solid rgba(255,255,255,.42);
-        border-radius: 24px;
-        padding: 22px;
-        box-shadow: 0 12px 35px rgba(0,0,0,.05);
-        margin-bottom: 22px;
-    }
-
-        .group-box h2,
-        .table-box h2 {
-            margin: 0 0 18px;
-            color: #1e1b4b;
-            font-size: 22px;
-            font-weight: 900;
-        }
-
-    .group-cards {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 16px;
-    }
-
-    .group-card {
-        min-height: 118px;
-        background: white;
-        border: 1px solid #eee5ff;
-        border-radius: 18px;
-        padding: 18px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        cursor: pointer;
-        box-shadow: 0 8px 22px rgba(124,58,237,.07);
-        transition: .2s;
-    }
-
-        .group-card:hover,
-        .group-card.active {
-            transform: translateY(-3px);
-            border-color: #8b5cf6;
-            box-shadow: 0 14px 30px rgba(124,58,237,.18);
-        }
-
-    .group-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
-        background: linear-gradient(135deg,#8b5cf6,#c084fc);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-    }
-
-    .group-card h1 {
-        margin: 5px 0 0;
-        font-size: 30px;
-        color: #1e1b4b;
-    }
-
-    .group-card p {
-        margin: 0;
-        color: #4b3b78;
-        font-weight: 700;
-    }
-
-    .add-group-card {
-        justify-content: center;
-        flex-direction: column;
-        color: #6d28ff;
-        background: #f4edff;
-    }
-
-    .plus-icon {
-        width: 54px;
-        height: 54px;
-        border-radius: 50%;
-        background: linear-gradient(135deg,#c084fc,#a78bfa);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 34px;
-    }
-
-    .table-scroll {
-        overflow-x: auto;
-        border-radius: 16px;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 980px;
-    }
-
-    th {
-        background: #f1eaff;
-        color: #4c1d95;
-        padding: 14px;
-        text-align: left;
-        font-size: 14px;
-        font-weight: 900;
-    }
-
-    td {
-        padding: 14px;
-        border-bottom: 1px solid #eee;
-        color: #29235c;
-        font-weight: 700;
-        font-size: 14px;
-    }
-
-    tbody tr:hover {
-        background: #faf7ff;
-    }
-
-    .dot {
-        width: 10px;
-        height: 10px;
-        background: #7c3aed;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 8px;
-    }
-
-    .bank-name {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .bank-logo {
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
-        background: #f3e8ff;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .detail-btn {
-        border: 1px solid #e9d5ff;
-        background: white;
-        color: #6d28ff;
-        padding: 8px 14px;
-        border-radius: 10px;
-        font-weight: 800;
-        cursor: pointer;
-    }
-
-    .icon-btn {
-        width: 34px;
-        height: 34px;
-        border: 1px solid #eee;
-        border-radius: 10px;
-        background: white;
-        cursor: pointer;
-        margin-right: 6px;
-    }
-
-        .icon-btn.edit {
-            color: #6d28ff;
-        }
-
-        .icon-btn.delete {
-            color: #ef4444;
-        }
-
-    .footer-note {
-        margin-top: 18px;
-        color: #7c7c95;
-        font-weight: 700;
-        font-size: 13px;
-    }
-
-    .detail-panel {
-        position: fixed;
-        right: 34px;
-        top: 118px;
-        width: 360px;
-        background: white;
-        border-radius: 24px;
-        padding: 22px;
-        z-index: 999;
-        box-shadow: 0 25px 65px rgba(0,0,0,.18);
-        border: 1px solid #eee5ff;
-    }
-
-    .detail-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-        .detail-header h2 {
-            margin: 0;
-            color: #1e1b4b;
-        }
-
-        .detail-header button {
-            border: none;
-            background: white;
-            color: #6b5ca5;
-            font-size: 28px;
-            cursor: pointer;
-        }
-
-    .bank-logo-big {
-        width: 74px;
-        height: 74px;
-        border-radius: 50%;
-        background: #f3e8ff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 38px;
-        margin: 18px 0 10px;
-    }
-
-    .detail-panel h3 {
-        margin: 0;
-        color: #1e1b4b;
-        font-size: 22px;
-    }
-
-    .detail-panel > p {
-        margin-top: 6px;
-        color: #6d28ff;
-        font-weight: 800;
-    }
-
-    .detail-list {
-        margin-top: 18px;
-    }
-
-        .detail-list p {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-            margin: 0;
-            color: #6b5ca5;
-            font-size: 14px;
-        }
-
-        .detail-list b {
-            color: #1e1b4b;
-            text-align: right;
-        }
-
-    .close-detail-btn {
-        width: 100%;
-        margin-top: 20px;
-        border: none;
-        background: linear-gradient(90deg,#6d28ff,#9333ea);
-        color: white;
-        padding: 13px;
-        border-radius: 14px;
-        font-weight: 900;
-        cursor: pointer;
-    }
-
-    @@media (max-width: 1100px) {
-        .summary-cards {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .group-cards {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .bank-header {
-            flex-direction: column;
-        }
-
-        .header-actions {
-            width: 100%;
-            flex-wrap: wrap;
-        }
-    }
-
-    @@media (max-width: 700px) {
-        .summary-cards,
-        .group-cards {
-            grid-template-columns: 1fr;
-        }
-
-        .search-box,
-        .group-filter,
-        .add-btn {
-            width: 100%;
-        }
-
-        .detail-panel {
-            left: 14px;
-            right: 14px;
-            top: 80px;
-            width: auto;
-        }
-    }
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(9, 0, 31, 0.58);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-    }
-
-    .modal-box {
-        width: 560px;
-        background: white;
-        border-radius: 24px;
-        padding: 24px;
-        box-shadow: 0 25px 60px rgba(0,0,0,.18);
-    }
-
-    .large-modal {
-        width: 760px;
-        max-width: 92vw;
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-        .modal-header h2 {
-            margin: 0;
-            color: #1e1b4b;
-        }
-
-    .modal-close {
-        border: none;
-        background: #f3e8ff;
-        color: #6d28ff;
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
-        font-size: 24px;
-        cursor: pointer;
-    }
-
-    .modal-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-    }
-
-        .modal-grid input,
-        .modal-grid select {
-            padding: 13px 14px;
-            border-radius: 12px;
-            border: 1px solid #e5e5e5;
-            outline: none;
-            font-weight: 700;
-        }
-
-            .modal-grid input:focus,
-            .modal-grid select:focus {
-                border-color: #7c3aed;
-                box-shadow: 0 0 0 4px rgba(124,58,237,.12);
-            }
-
-    .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        margin-top: 22px;
-    }
-
-    .cancel-btn {
-        border: none;
-        background: #f3f4f6;
-        padding: 11px 18px;
-        border-radius: 12px;
-        cursor: pointer;
-        font-weight: 700;
-    }
-
-    .save-btn {
-        border: none;
-        background: linear-gradient(90deg,#6d28ff,#a855f7);
-        color: white;
-        padding: 11px 20px;
-        border-radius: 12px;
-        cursor: pointer;
-        font-weight: 700;
-    }
-    .warning-toast {
-        position: fixed;
-        top: 24px;
-        right: 24px;
-        background: linear-gradient(90deg,#f59e0b,#fbbf24);
-        color: white;
-        padding: 14px 22px;
-        border-radius: 14px;
-        font-weight: 700;
-        z-index: 99999;
-    }
-</style>
