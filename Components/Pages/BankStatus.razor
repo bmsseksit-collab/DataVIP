@@ -1,0 +1,387 @@
+﻿@page "/bank-status"
+
+@using DataVipWeb.Models
+@using DataVipWeb.Services
+
+@inject SupabaseService SupabaseService
+@inject NavigationManager Nav
+
+<h1 class="page-title">สถานะบัญชี</h1>
+<p class="page-subtitle">จัดการสถานะบัญชีและหมายเหตุของบัญชีทั้งหมด</p>
+
+<div class="status-grid">
+
+    <div class="status-card green @(selectedStatus == "ใช้งานอยู่" ? "active" : "")"
+         @onclick='() => SelectStatus("ใช้งานอยู่")'>
+        <div class="status-title">ใช้งานอยู่</div>
+        <div class="status-number">@CountByStatus("ใช้งานอยู่")</div>
+    </div>
+
+    <div class="status-card blue @(selectedStatus == "พร้อมใช้งาน" ? "active" : "")"
+         @onclick='() => SelectStatus("พร้อมใช้งาน")'>
+        <div class="status-title">พร้อมใช้งาน</div>
+        <div class="status-number">@CountByStatus("พร้อมใช้งาน")</div>
+    </div>
+
+    <div class="status-card red @(selectedStatus == "มีปัญหา" ? "active" : "")"
+         @onclick='() => SelectStatus("มีปัญหา")'>
+        <div class="status-title">มีปัญหา</div>
+        <div class="status-number">@CountByStatus("มีปัญหา")</div>
+    </div>
+
+</div>
+
+<div class="status-table-box">
+
+    <div class="table-header">
+        <h2>รายการสถานะบัญชี</h2>
+
+        <input class="search-box"
+               placeholder="ค้นหาชื่อบัญชี / เลขบัญชี / ธนาคาร..."
+               value="@searchText"
+               @oninput="OnSearchChanged" />
+    </div>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>สายบัญชี</th>
+                    <th>ธนาคาร</th>
+                    <th>ชื่อบัญชี</th>
+                    <th>เลขที่บัญชี</th>
+                    <th>สถานะ</th>
+                    <th>สถานะบัญชี</th>
+                    <th>หมายเหตุ</th>
+                    <th>รายละเอียด</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="8">กำลังโหลดข้อมูล...</td>
+                    </tr>
+                }
+                else if (!FilteredAccounts.Any())
+                {
+                    <tr>
+                        <td colspan="8">ไม่พบข้อมูลบัญชี</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in FilteredAccounts)
+                    {
+                        <tr>
+                            <td>@item.GroupName</td>
+                            <td>@item.AccountType</td>
+                            <td>@item.AccountName</td>
+                            <td>@item.AccountNumber</td>
+
+                            <td>
+                                <span class="@GetStatusClass(item.Status)">
+                                    @item.Status
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="account-status-tag">
+                                    @(string.IsNullOrWhiteSpace(item.AccountStatus) ? "-" : item.AccountStatus)
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="note-short">
+                                    @GetShortNote(GetDisplayNote(item))
+                                </span>
+                            </td>
+
+                            <td>
+                                <button class="note-detail-btn"
+                                        @onclick="() => OpenNoteDetail(item)">
+                                    ดูรายละเอียด
+                                </button>
+
+                                <button class="edit-status-btn"
+                                        @onclick="() => OpenEditStatusModal(item)">
+                                    แก้ไข
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="status-toast">
+        @message
+    </div>
+}
+@if (showEditModal && editingAccount != null)
+{
+    <div class="modal-overlay">
+        <div class="status-edit-modal">
+
+            <div class="modal-header">
+                <h2>แก้ไขสถานะบัญชี</h2>
+                <button class="modal-close" @onclick="CloseEditStatusModal">×</button>
+            </div>
+
+            <div class="edit-info-box">
+                <b>@editingAccount.AccountType</b>
+                <span>@editingAccount.AccountName</span>
+                <small>@editingAccount.AccountNumber</small>
+            </div>
+
+            <div class="edit-form">
+                <label>สถานะบัญชี</label>
+                <input placeholder="เช่น รอตรวจสอบ, ติดต่อแล้ว, ใช้งานได้"
+                       @bind="editAccountStatus" />
+
+                <label>หมายเหตุ</label>
+                <textarea placeholder="กรอกหมายเหตุ..."
+                          @bind="editAccountStatusNote"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel-btn" @onclick="CloseEditStatusModal">
+                    ยกเลิก
+                </button>
+
+                <button class="save-status-btn"
+                        disabled="@isSaving"
+                        @onclick="SaveEditStatus">
+                    @(isSaving ? "กำลังบันทึก..." : "บันทึก")
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@if (showNoteModal && noteAccount != null)
+{
+    <div class="modal-overlay">
+        <div class="note-detail-modal">
+
+            <div class="modal-header">
+                <h2>รายละเอียดหมายเหตุ</h2>
+                <button class="modal-close" @onclick="CloseNoteDetail">×</button>
+            </div>
+
+            <div class="note-account-title">
+                @noteAccount.AccountType - @noteAccount.AccountName
+            </div>
+
+            <div class="note-full-text">
+                @GetDisplayNote(noteAccount)
+            </div>
+
+            <button class="close-note-btn" @onclick="CloseNoteDetail">
+                ปิด
+            </button>
+
+        </div>
+    </div>
+}
+
+@code {
+    private List<BankAccount> bankAccounts = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string selectedStatus = "";
+    private string message = "";
+    private bool showEditModal = false;
+    private bool showNoteModal = false;
+    private string editAccountStatus = "";
+    private string editAccountStatusNote = "";
+    private string searchText = "";
+
+    private BankAccount? editingAccount;
+    private BankAccount? noteAccount;
+
+    private async Task HideMessageAfterDelay()
+    {
+        await Task.Delay(2500);
+        message = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool MatchSearch(BankAccount x, string keyword)
+    {
+        return
+            (x.GroupName?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (x.AccountType?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (x.AccountName?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (x.AccountNumber?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (x.AccountStatus?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (x.AccountStatusNote?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (x.StatusNote?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(searchText))
+            return;
+
+        var matchedAccount = bankAccounts.FirstOrDefault(x =>
+            MatchSearch(x, searchText));
+
+        if (matchedAccount != null)
+        {
+            selectedStatus = matchedAccount.Status;
+        }
+    }
+
+    private string GetDisplayNote(BankAccount account)
+    {
+        if (account.Status == "ใช้งานอยู่")
+            return account.StatusNote ?? "";
+
+        return account.AccountStatusNote ?? "";
+    }
+
+    private void OpenEditStatusModal(BankAccount account)
+    {
+        editingAccount = account;
+        editAccountStatus = account.AccountStatus;
+        editAccountStatusNote = account.AccountStatusNote;
+        showEditModal = true;
+    }
+
+    private void CloseEditStatusModal()
+    {
+        showEditModal = false;
+        editingAccount = null;
+        editAccountStatus = "";
+        editAccountStatusNote = "";
+    }
+
+    private async Task SaveEditStatus()
+    {
+        if (isSaving || editingAccount == null)
+            return;
+
+        isSaving = true;
+        message = "";
+
+        try
+        {
+            editingAccount.AccountStatus = editAccountStatus?.Trim() ?? "";
+            editingAccount.AccountStatusNote = editAccountStatusNote?.Trim() ?? "";
+
+            await SupabaseService.Client
+                .From<BankAccount>()
+                .Update(editingAccount);
+
+            message = "บันทึกสถานะบัญชีเรียบร้อยแล้ว";
+            _ = HideMessageAfterDelay();
+
+            CloseEditStatusModal();
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            message = "❌ " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void OpenNoteDetail(BankAccount account)
+    {
+        noteAccount = account;
+        showNoteModal = true;
+    }
+
+    private void CloseNoteDetail()
+    {
+        noteAccount = null;
+        showNoteModal = false;
+    }
+
+    private string GetShortNote(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+            return "-";
+
+        return note.Length > 24
+            ? note.Substring(0, 24) + "..."
+            : note;
+    }
+
+    private IEnumerable<BankAccount> FilteredAccounts =>
+    bankAccounts.Where(x =>
+        (string.IsNullOrWhiteSpace(selectedStatus) ||
+         x.Status == selectedStatus)
+        &&
+        (string.IsNullOrWhiteSpace(searchText) ||
+         MatchSearch(x, searchText)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+
+            var result = await SupabaseService.Client
+                .From<BankAccount>()
+                .Get();
+
+            bankAccounts = result.Models ?? new List<BankAccount>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private int CountByStatus(string status)
+    {
+        return bankAccounts.Count(x => x.Status == status);
+    }
+
+    private void SelectStatus(string status)
+    {
+        selectedStatus = status;
+    }
+
+    private void ClearFilter()
+    {
+        selectedStatus = "";
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "ใช้งานอยู่" => "status-active",
+            "พร้อมใช้งาน" => "status-ready",
+            "มีปัญหา" => "status-problem",
+            _ => "status-ready"
+        };
+    }
+}

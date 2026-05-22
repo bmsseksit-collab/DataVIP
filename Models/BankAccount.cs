@@ -9,6 +9,12 @@ namespace DataVipWeb.Models
         [PrimaryKey("id", false)]
         public Guid Id { get; set; }
 
+        [Column("account_status")]
+        public string AccountStatus { get; set; } = "";
+
+        [Column("account_status_note")]
+        public string AccountStatusNote { get; set; } = "";
+
         [Column("status_note")]
         public string StatusNote { get; set; } = "";
 
