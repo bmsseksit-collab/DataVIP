@@ -182,7 +182,9 @@
 
                                 <td>
                                     <div class="bank-name">
-                                        <span class="bank-logo">🏦</span>
+                                        <span class="bank-logo">
+                                            <img src="@BankDetailHelper.GetBankLogo(item.BankName)" />
+                                        </span>
                                         @item.AccountType
                                     </div>
                                 </td>
@@ -321,7 +323,7 @@
                 @if (IsBizBank(newAccount.AccountType))
                 {
                     <BizBankForm Account="newAccount"
-                                 AccountType="newAccount.AccountType"
+                                 AccountType="@newAccount.AccountType"
                                  GetDetailValue="GetDetailValue"
                                  SetDetailValue="SetDetailValue" />
                 }
@@ -743,8 +745,11 @@
             detailsFields["ReleasedDate"] = "";
             detailsFields["CitizenId"] = "";
             detailsFields["BirthDate"] = "";
+            detailsFields["CompanyNo"] = "";
             detailsFields["AtmNumber"] = "";
             detailsFields["AtmPin"] = "";
+            detailsFields["CompanyNo"] = "";
+            detailsFields["CompanyCode"] = "";
             detailsFields["Phone"] = "";
             detailsFields["SimExpire"] = "";
             detailsFields["Limit"] = "";

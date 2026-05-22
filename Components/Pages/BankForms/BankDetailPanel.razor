@@ -1,5 +1,5 @@
 ﻿@using DataVipWeb.Models
-@using System.Text.Json
+@using DataVipWeb.Components.Pages.BankForms
 
 @if (Account != null)
 {
@@ -26,7 +26,7 @@
                     {
                         <div class="detail-status-box">
 
-                            <span class="@GetStatusClass(Account.Status)">
+                            <span class="@BankDetailHelper.GetStatusClass(Account.Status)">
                                 @Account.Status
                             </span>
 
@@ -46,201 +46,42 @@
             </div>
 
             <div class="detail-bank-head">
-                <div class="bank-logo-big">🏦</div>
+                <div class="bank-logo-big">
+                    <img src="@BankDetailHelper.GetBankLogo(Account.BankName)" />
+                </div>
 
                 <div>
-                    <h3>@Account.BankName</h3>
-                    <p>@Account.AccountType</p>
+                    <h3>@BankDetailHelper.GetBankShortName(Account.BankName)</h3>
+                    <p>
+                        <span class="bank-type-pill @BankDetailHelper.GetBankThemeClass(Account.BankName)">
+                            @Account.AccountType
+                        </span>
+                    </p>
                 </div>
             </div>
 
             @{
-                var mainRows = new List<(string Label, string Value)>();
-
-                if (!string.IsNullOrWhiteSpace(Account.AccountName))
-                    mainRows.Add(("ชื่อบัญชี", Account.AccountName));
-
-                if (!string.IsNullOrWhiteSpace(Account.OwnerName))
-                    mainRows.Add(("ชื่อเจ้าของบัญชี", Account.OwnerName));
-
-                var citizenId = GetRawDetail("CitizenId");
-                if (!string.IsNullOrWhiteSpace(citizenId))
-                    mainRows.Add(("เลขบัตรประชาชน", FormatValue("CitizenId", citizenId)));
-
-                var birthDate = GetRawDetail("BirthDate");
-                if (!string.IsNullOrWhiteSpace(birthDate))
-                    mainRows.Add(("วันเกิด", FormatValue("BirthDate", birthDate)));
-
-                if (!string.IsNullOrWhiteSpace(Account.Branch))
-                    mainRows.Add(("สาขา", Account.Branch));
-
-                if (!string.IsNullOrWhiteSpace(Account.AccountNumber))
-                    mainRows.Add(("เลขบัญชี", Account.AccountNumber));
-
-                // =========================
-                // รายละเอียดเพิ่มเติม
-                // =========================
-
-                var normalDetails = new List<(string Label, string Value)>();
-
-                // =========================
-                // SCB นิติ
-                // =========================
-
-                if (Account.AccountType == "SCB นิติ")
-                {
-                    var scbCorporateOrder = new[]
-                    {
-                        "CompanyNo",
-                        "TokenPin",
-                        "Phone",
-                        "SimExpire",
-                        "ScbUser",
-                        "ScbPass",
-                        "Email",
-                        "EmailPass",
-                        "AppCode"
-                    };
-
-                    foreach (var key in scbCorporateOrder)
-                    {
-                        // เบอร์โทร + เครือข่าย
-                        if (key == "Phone")
-                        {
-                            var phoneNetwork = GetRawDetail("PhoneNetwork");
-                            var phone = GetRawDetail("Phone");
-
-                            if (!string.IsNullOrWhiteSpace(phone))
-                            {
-                                normalDetails.Add((
-                                    string.IsNullOrWhiteSpace(phoneNetwork)
-                                        ? "เบอร์โทร"
-                                        : $"เบอร์ {phoneNetwork}",
-                                    phone
-                                ));
-                            }
-
-                            continue;
-                        }
-
-                        var value = GetRawDetail(key);
-
-                        if (!string.IsNullOrWhiteSpace(value))
-                        {
-                            normalDetails.Add((
-                                GetLabel(key),
-                                FormatValue(key, value)
-                            ));
-                        }
-                    }
-                }
-                
-
-                // =========================
-                // บุคคลทั่วไป
-                // =========================
-
-                else
-                {
-                    var personalOrder = new[]
-                    {
-                        "AtmNumber",
-                        "AtmPin",
-                        "Phone",
-                        "SimExpire",
-                        "Limit",
-                        "BookBank",
-                        "Email",
-                        "EmailPass",
-                        "AppCode"
-                    };
-
-                    foreach (var key in personalOrder)
-                    {
-                        if (key == "Phone")
-                        {
-                            var phoneNetwork = GetRawDetail("PhoneNetwork");
-                            var phone = GetRawDetail("Phone");
-
-                            if (!string.IsNullOrWhiteSpace(phone))
-                            {
-                                normalDetails.Add((
-                                    string.IsNullOrWhiteSpace(phoneNetwork)
-                                        ? "เบอร์โทร"
-                                        : $"เบอร์ {phoneNetwork}",
-                                    phone
-                                ));
-                            }
-
-                            continue;
-                        }
-
-                        var value = GetRawDetail(key);
-
-                        if (!string.IsNullOrWhiteSpace(value))
-                        {
-                            normalDetails.Add((
-                                GetLabel(key),
-                                FormatValue(key, value)
-                            ));
-                        }
-                    }
-                }
-
-                // หมายเหตุ
-                if (!string.IsNullOrWhiteSpace(Account.Note))
-                    normalDetails.Add(("หมายเหตุ", Account.Note));
-
-                // =========================
-                // ล่างสุด
-                // =========================
-
-                var bottomDetails = new List<(string Label, string Value)>();
-
-                var address = GetRawDetail("Address");
-                if (!string.IsNullOrWhiteSpace(address))
-                {
-                    bottomDetails.Add((
-                        "ที่อยู่",
-                        FormatValue("Address", address)
-                    ));
-                }
-
-                var receivedDate = GetRawDetail("ReceivedDate");
-                if (!string.IsNullOrWhiteSpace(receivedDate))
-                {
-                    bottomDetails.Add((
-                        "วันที่รับบัญชี",
-                        FormatValue("ReceivedDate", receivedDate)
-                    ));
-                }
-
-                var releasedDate = GetRawDetail("ReleasedDate");
-                if (!string.IsNullOrWhiteSpace(releasedDate))
-                {
-                    bottomDetails.Add((
-                        "วันที่ปล่อยใช้งาน",
-                        FormatValue("ReleasedDate", releasedDate)
-                    ));
-                }
-
-                var allNormalRows = mainRows.Concat(normalDetails).ToList();
+                var detailData = BankDetailBuilder.Build(Account);
             }
 
             <div class="detail-grid-table">
-                @foreach (var item in allNormalRows)
+                @foreach (var item in detailData.NormalRows)
                 {
-                    <div class="detail-cell label">@item.Label</div>
+                    <div class="detail-cell label @BankDetailHelper.GetBankThemeClass(Account.BankName) @GetDetailRowTheme(item.Label)">
+                        @item.Label
+                    </div>
                     <div class="detail-cell value">@item.Value</div>
                 }
             </div>
 
-            @if (bottomDetails.Any())
+            @if (detailData.BottomRows.Any())
             {
                 <div class="detail-bottom-table">
-                    @foreach (var item in bottomDetails)
+                    @foreach (var item in detailData.BottomRows)
                     {
-                        <div class="detail-cell label">@item.Label</div>
+                        <div class="detail-cell label @BankDetailHelper.GetBankThemeClass(Account.BankName) @GetDetailRowTheme(item.Label)">
+                            @item.Label
+                        </div>
                         <div class="detail-cell value">@item.Value</div>
                     }
                 </div>
@@ -258,317 +99,14 @@
     [Parameter] public BankAccount? Account { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private string GetRawDetail(string key)
+    private string GetDetailRowTheme(string label)
     {
-        return Details.ContainsKey(key) ? Details[key] : "";
-    }
+        if (label.Contains("(ผู้ทำ)"))
+            return "theme-maker";
 
-    private string GetStatusClass(string status)
-    {
-        return status switch
-        {
-            "ใช้งานอยู่" => "status-active",
-            "พร้อมใช้งาน" => "status-ready",
-            "มีปัญหา" => "status-problem",
-            _ => "status-ready"
-        };
-    }
+        if (label.Contains("(ผู้อนุมัติ)"))
+            return "theme-approver";
 
-    private Dictionary<string, string> Details
-    {
-        get
-        {
-            if (Account == null || string.IsNullOrWhiteSpace(Account.DetailsJson))
-                return new();
-
-            try
-            {
-                return JsonSerializer.Deserialize<Dictionary<string, string>>(Account.DetailsJson) ?? new();
-            }
-            catch
-            {
-                return new();
-            }
-        }
-    }
-
-    private string Show(string? value)
-    {
-        return value ?? "";
-    }
-
-    private string FormatValue(string key, string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "-";
-
-        if (key.Contains("Date") || key.Contains("Expire"))
-        {
-            if (DateTime.TryParse(value, out var date))
-                return FormatThaiDate(date);
-        }
-
-        return value;
-    }
-
-    private string GetLabel(string key)
-    {
-        return key switch
-        {
-            "CitizenId" => "เลขบัตรประชาชน",
-            "BirthDate" => "วันเกิด",
-            "CompanyNo" => "ทะเบียนนิติบุคคล",
-            "TokenPin" => "SCB Digital Token PIN",
-            "AtmNumber" => "เลขบัตร ATM",
-            "AtmPin" => "รหัส ATM",
-            "PhoneNetwork" => "เครือข่าย",
-            "Phone" => "เบอร์โทร",
-            "SimExpire" => "วันหมดอายุซิม",
-            "BizUser" => "Biz Username",
-            "BizPass" => "Biz Password",
-            "ScbUser" => "SCB Username",
-            "ScbPass" => "SCB Password",
-            "Limit" => "วงเงิน",
-            "BookBank" => "สมุดบัญชี",
-            "Email" => "Email",
-            "EmailPass" => "Email Password",
-            "AppCode" => "รหัส APP",
-            "Address" => "ที่อยู่",
-            "ReceivedDate" => "วันที่รับบัญชี",
-            "ReleasedDate" => "วันที่ปล่อยใช้งาน",
-            _ => key
-        };
-    }
-
-    private string FormatThaiDate(DateTime date)
-    {
-        string[] months =
-        {
-            "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.",
-            "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.",
-            "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
-        };
-
-        return $"{date.Day} {months[date.Month - 1]} {date.Year + 543}";
+        return "";
     }
 }
-<style>
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(9, 0, 31, 0.58);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 20px;
-        padding-right: 72px;
-    }
-
-    .modal-close {
-        border: none;
-        background: #f3e8ff;
-        color: #6d28ff;
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
-        font-size: 24px;
-        cursor: pointer;
-    }
-
-    .bank-logo-big {
-        width: 74px;
-        height: 74px;
-        border-radius: 50%;
-        background: #f3e8ff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 38px;
-        margin: 10px 0;
-    }
-
-
-    .close-detail-btn {
-        width: 100%;
-        margin-top: 20px;
-        border: none;
-        background: linear-gradient(90deg,#6d28ff,#9333ea);
-        color: white;
-        padding: 13px;
-        border-radius: 14px;
-        font-weight: 900;
-        cursor: pointer;
-    }
-
-    .detail-title-group {
-        color: #7c3aed;
-        font-size: 22px;
-        margin-left: 8px;
-    }
-
-    .detail-bank-head {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 16px;
-    }
-
-        .detail-bank-head h3 {
-            margin: 0;
-            color: #1e1b4b;
-            font-size: 28px;
-            font-weight: 900;
-        }
-
-        .detail-bank-head p {
-            margin: 4px 0 0;
-            color: #7c3aed;
-            font-weight: 800;
-        }
-
-    .detail-modal-box {
-        position: relative;
-        width: fit-content;
-        min-width: 480px;
-        max-width: 94vw;
-        max-height: 86vh;
-        overflow-y: auto;
-        background: white;
-        border-radius: 24px;
-        padding: 52px 24px 24px;
-        box-shadow: 0 25px 60px rgba(0,0,0,.18);
-    }
-
-    .detail-grid-table {
-        display: grid;
-        grid-template-columns: max-content minmax(220px,1fr);
-        border-top: 1px solid #ded6f7;
-        border-left: 1px solid #ded6f7;
-    }
-
-    .detail-bottom-table {
-        display: grid;
-        grid-template-columns: max-content minmax(220px,1fr);
-        border-top: 1px solid #ded6f7;
-        border-left: 1px solid #ded6f7;
-        margin-top: 8px;
-    }
-
-    .detail-cell {
-        border-right: 1px solid #ded6f7;
-        border-bottom: 1px solid #ded6f7;
-        padding: 6px 8px;
-        font-size: 12px;
-        min-height: 30px;
-        word-break: break-word;
-        overflow-wrap: anywhere;
-    }
-
-        .detail-cell.label {
-            background: #ede3ff;
-            color: #4c1d95;
-            font-weight: 900;
-        }
-
-        .detail-cell.value {
-            color: #1e1b4b;
-            font-weight: 800;
-            text-align: center;
-        }
-
-    .detail-floating-close {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        width: 38px;
-        height: 38px;
-        border: none;
-        border-radius: 12px;
-        background: #f3e8ff;
-        color: #7c3aed;
-        font-size: 24px;
-        font-weight: 900;
-        line-height: 1;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10;
-    }
-
-    .detail-note-badge {
-        padding: 6px 14px;
-        background: #f3f4f6;
-        color: #374151;
-        border: 1px solid #e5e7eb;
-        border-radius: 999px;
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.2;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        max-width: 220px;
-        text-align: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,.04);
-    }
-
-    .header-right {
-        position: absolute;
-        top: 72px;
-        right: 24px;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-    }
-
-    .detail-status-box {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 6px;
-    }
-
-    .status-active,
-    .status-ready,
-    .status-problem {
-        padding: 7px 16px;
-        border-radius: 999px;
-        font-size: 13px;
-        font-weight: 700;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-        border: 1px solid transparent;
-    }
-
-    /* ใช้งานอยู่ */
-    .status-active {
-        background: #dcfce7;
-        color: #166534;
-        border-color: #bbf7d0;
-    }
-
-    /* พร้อมใช้งาน */
-    .status-ready {
-        background: #dbeafe;
-        color: #1d4ed8;
-        border-color: #bfdbfe;
-    }
-
-    /* มีปัญหา */
-    .status-problem {
-        background: #fee2e2;
-        color: #dc2626;
-        border-color: #fecaca;
-    }
-
-</style>

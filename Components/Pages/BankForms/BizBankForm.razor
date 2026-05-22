@@ -5,7 +5,11 @@
 </div>
 
 <input placeholder="ชื่อบัญชี" @bind="Account.AccountName" />
-<input placeholder="ชื่อเจ้าของบัญชี" @bind="Account.OwnerName" />
+@if (AccountType != "KBANK บุคคล")
+{
+    <input placeholder="ชื่อเจ้าของบัญชี"
+           @bind="Account.OwnerName" />
+}
 
 <input placeholder="เลขบัตรประชาชน"
        value="@GetDetailValue("CitizenId")"
@@ -18,13 +22,39 @@
 <input placeholder="สาขา" @bind="Account.Branch" />
 <input placeholder="เลขบัญชี" @bind="Account.AccountNumber" />
 
-<input placeholder="เลขบัตร ATM"
-       value="@GetDetailValue("AtmNumber")"
-       @oninput='e => SetDetailValue("AtmNumber", e.Value?.ToString() ?? "")' />
+@if (AccountType == "KBANK นิติ")
+{
+    <input placeholder="เลขทะเบียนนิติบุคคล"
+           value="@GetDetailValue("CompanyNo")"
+           @oninput='e => SetDetailValue("CompanyNo", e.Value?.ToString() ?? "")' />
+}
+else if (AccountType == "KTB นิติ" || AccountType == "BAY นิติ" || AccountType == "TTB นิติ")
+{
+    <input placeholder="ทะเบียนนิติบุคคลเลขที่"
+           value="@GetDetailValue("CompanyNo")"
+           @oninput='e => SetDetailValue("CompanyNo", e.Value?.ToString() ?? "")' />
 
-<input placeholder="รหัส ATM"
-       value="@GetDetailValue("AtmPin")"
-       @oninput='e => SetDetailValue("AtmPin", e.Value?.ToString() ?? "")' />
+    @if (AccountType == "TTB นิติ")
+    {
+        <input placeholder="TTB Digital Token"
+               value="@GetDetailValue("TokenPin")"
+               @oninput='e => SetDetailValue("TokenPin", e.Value?.ToString() ?? "")' />
+    }
+
+    <input placeholder="@GetCompanyCodePlaceholder()"
+           value="@GetDetailValue("CompanyCode")"
+           @oninput='e => SetDetailValue("CompanyCode", e.Value?.ToString() ?? "")' />
+}
+else
+{
+    <input placeholder="เลขบัตร ATM"
+           value="@GetDetailValue("AtmNumber")"
+           @oninput='e => SetDetailValue("AtmNumber", e.Value?.ToString() ?? "")' />
+
+    <input placeholder="รหัส ATM"
+           value="@GetDetailValue("AtmPin")"
+           @oninput='e => SetDetailValue("AtmPin", e.Value?.ToString() ?? "")' />
+}
 
 <div class="phone-row">
     <select value="@GetDetailValue("PhoneNetwork")"
@@ -96,6 +126,17 @@
     [Parameter] public Func<string, string> GetDetailValue { get; set; } = default!;
     [Parameter] public Action<string, string> SetDetailValue { get; set; } = default!;
     [Parameter] public string AccountType { get; set; } = "";
+
+    private string GetCompanyCodePlaceholder()
+    {
+        if (AccountType == "BAY นิติ")
+            return "BAY รหัสบริษัท";
+
+        if (AccountType == "TTB นิติ")
+            return "TTB รหัสบริษัท";
+
+        return "KTB รหัสบริษัท";
+    }
 
     private string GetBizUserLabel()
     {
