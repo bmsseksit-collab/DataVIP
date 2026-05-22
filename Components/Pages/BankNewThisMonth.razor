@@ -1,0 +1,276 @@
+﻿@page "/bank-new-this-month"
+
+@using DataVipWeb.Models
+@using DataVipWeb.Services
+@using DataVipWeb.Components.Pages.BankForms
+
+@inject SupabaseService SupabaseService
+@inject NavigationManager Nav
+
+<h1 class="page-title">บัญชีใหม่เดือนนี้</h1>
+<p class="page-subtitle">รายการบัญชีที่รับเข้ามาในช่วงวันที่ที่กำหนด</p>
+
+<div class="summary-card purple">
+    <div>
+        <p>บัญชีเข้าใหม่ทั้งหมด</p>
+        <h1>@FilteredAccounts.Count()</h1>
+        <span>รายการ</span>
+    </div>
+</div>
+
+<div class="filter-box">
+    <div class="date-box">
+        <label>ตั้งแต่วันที่</label>
+        <input type="date" @bind="startDate" />
+    </div>
+
+    <div class="date-box">
+        <label>ถึงวันที่</label>
+        <input type="date" @bind="endDate" />
+    </div>
+
+    <input class="search-box"
+           placeholder="ค้นหาสายบัญชี / ธนาคาร / ชื่อบัญชี / เลขบัญชี..."
+           @bind="searchText"
+           @bind:event="oninput" />
+</div>
+
+<div class="table-box">
+    <h2>รายการบัญชีใหม่</h2>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>สายบัญชี</th>
+                    <th>ธนาคาร</th>
+                    <th>ชื่อบัญชี</th>
+                    <th>เลขบัญชี</th>
+                    <th>วันที่รับบัญชี</th>
+                    <th>ผู้รับบัญชี</th>
+                    <th>จัดการ</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="7">กำลังโหลดข้อมูล...</td>
+                    </tr>
+                }
+                else if (!FilteredAccounts.Any())
+                {
+                    <tr>
+                        <td colspan="7">ไม่พบข้อมูลบัญชีใหม่</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in FilteredAccounts)
+                    {
+                        <tr>
+                            <td>@item.GroupName</td>
+                            <td>@item.AccountType</td>
+                            <td>@item.AccountName</td>
+                            <td>@item.AccountNumber</td>
+                            <td>@GetReceivedDateText(item)</td>
+                            <td>@(string.IsNullOrWhiteSpace(item.ReceivedBy) ? "-" : item.ReceivedBy)</td>
+                            <td>
+                                <button class="edit-btn"
+                                        @onclick="() => OpenEditModal(item)">
+                                    แก้ไข
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (showEditModal && editingAccount != null)
+{
+    <div class="modal-overlay">
+        <div class="edit-modal">
+
+            <div class="modal-header">
+                <h2>แก้ไขผู้รับบัญชี</h2>
+                <button class="modal-close" @onclick="CloseEditModal">×</button>
+            </div>
+
+            <div class="info-box">
+                <b>@editingAccount.AccountType</b>
+                <span>@editingAccount.AccountName</span>
+                <small>@editingAccount.AccountNumber</small>
+            </div>
+
+            <label>ผู้รับบัญชี</label>
+            <input class="receiver-input"
+                   placeholder="กรอกชื่อผู้รับบัญชี..."
+                   @bind="editReceivedBy" />
+
+            <div class="modal-actions">
+                <button class="cancel-btn" @onclick="CloseEditModal">ยกเลิก</button>
+
+                <button class="save-btn"
+                        disabled="@isSaving"
+                        @onclick="SaveReceivedBy">
+                    @(isSaving ? "กำลังบันทึก..." : "บันทึก")
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="toast">@message</div>
+}
+
+@code {
+    private List<BankAccount> bankAccounts = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string searchText = "";
+    private string message = "";
+
+    private DateTime startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime endDate = DateTime.Today;
+
+    private bool showEditModal = false;
+    private BankAccount? editingAccount;
+    private string editReceivedBy = "";
+
+    private IEnumerable<BankAccount> FilteredAccounts =>
+        bankAccounts.Where(x =>
+        {
+            var receivedDate = GetReceivedDate(x);
+
+            return receivedDate.HasValue &&
+                   receivedDate.Value.Date >= startDate.Date &&
+                   receivedDate.Value.Date <= endDate.Date &&
+                   MatchSearch(x);
+        });
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+
+            var result = await SupabaseService.Client
+                .From<BankAccount>()
+                .Get();
+
+            bankAccounts = result.Models ?? new List<BankAccount>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool MatchSearch(BankAccount account)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+            return true;
+
+        return
+            (account.GroupName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (account.AccountType?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (account.AccountName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (account.AccountNumber?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (account.ReceivedBy?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private DateTime? GetReceivedDate(BankAccount account)
+    {
+        var details = BankDetailHelper.ParseDetails(account.DetailsJson);
+
+        if (!details.ContainsKey("ReceivedDate"))
+            return null;
+
+        if (DateTime.TryParse(details["ReceivedDate"], out var date))
+            return date;
+
+        return null;
+    }
+
+    private string GetReceivedDateText(BankAccount account)
+    {
+        var date = GetReceivedDate(account);
+
+        if (!date.HasValue)
+            return "-";
+
+        return BankDetailHelper.FormatThaiDate(date.Value);
+    }
+
+    private void OpenEditModal(BankAccount account)
+    {
+        editingAccount = account;
+        editReceivedBy = account.ReceivedBy;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        editingAccount = null;
+        editReceivedBy = "";
+        showEditModal = false;
+    }
+
+    private async Task SaveReceivedBy()
+    {
+        if (isSaving || editingAccount == null)
+            return;
+
+        isSaving = true;
+        message = "";
+
+        try
+        {
+            editingAccount.ReceivedBy = editReceivedBy?.Trim() ?? "";
+
+            await SupabaseService.Client
+                .From<BankAccount>()
+                .Update(editingAccount);
+
+            message = "บันทึกผู้รับบัญชีเรียบร้อยแล้ว";
+
+            CloseEditModal();
+            await LoadData();
+
+            _ = HideMessageAfterDelay();
+        }
+        catch (Exception ex)
+        {
+            message = "❌ " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HideMessageAfterDelay()
+    {
+        await Task.Delay(2500);
+        message = "";
+        await InvokeAsync(StateHasChanged);
+    }
+}

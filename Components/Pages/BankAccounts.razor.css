@@ -723,3 +723,31 @@ tbody tr:hover {
 
     
 }
+
+.pagination-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    margin-top: 20px;
+}
+
+    .pagination-box button {
+        border: none;
+        background: #f3e8ff;
+        color: #6d28ff;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+        .pagination-box button:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+    .pagination-box span {
+        font-weight: 900;
+        color: #24104f;
+    }

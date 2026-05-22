@@ -9,6 +9,9 @@ namespace DataVipWeb.Models
         [PrimaryKey("id", false)]
         public Guid Id { get; set; }
 
+        [Column("received_by")]
+        public string ReceivedBy { get; set; } = "";
+
         [Column("account_status")]
         public string AccountStatus { get; set; } = "";
 

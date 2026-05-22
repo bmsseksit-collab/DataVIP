@@ -18,8 +18,8 @@
         <div class="header-actions">
             <input class="search-box"
                    placeholder="ค้นหาบัญชี..."
-                   @bind="searchText"
-                   @bind:event="oninput" />
+                   value="@searchText"
+                   @oninput="OnSearchChanged" />
 
             <button class="add-btn" @onclick="OpenAddModal">
                 + เพิ่มบัญชี
@@ -74,7 +74,7 @@
         <div class="group-cards">
 
             <div class="group-card @(string.IsNullOrWhiteSpace(selectedGroup) ? "active" : "")"
-                 @onclick="() => selectedGroup = string.Empty">
+                 @onclick="() => SelectGroup(string.Empty)">
 
                 <div class="group-icon">📋</div>
 
@@ -89,7 +89,7 @@
             @foreach (var group in Groups)
             {
                 <div class="group-card @(selectedGroup == group ? "active" : "")"
-                     @onclick="() => selectedGroup = group">
+                     @onclick="() => SelectGroup(group)">
 
                     <button class="delete-group-btn"
                             @onclick:stopPropagation="true"
@@ -117,8 +117,11 @@
 
             <div class="group-card add-group-card"
                  @onclick="OpenAddGroupModal">
+
                 <div class="plus-icon">+</div>
+
                 <b>เพิ่มสายบัญชี</b>
+
             </div>
 
         </div>
@@ -171,7 +174,7 @@
                     }
                     else
                     {
-                        @foreach (var item in FilteredAccounts)
+                        @foreach (var item in PagedAccounts)
                         {
                             <tr>
 
@@ -225,6 +228,26 @@
 
                 </tbody>
             </table>
+            @if (TotalPages > 1)
+            {
+                <div class="pagination-box">
+
+                    <button disabled="@(currentPage == 1)"
+                            @onclick="() => currentPage--">
+                        ก่อนหน้า
+                    </button>
+
+                    <span>
+                        หน้า @currentPage / @TotalPages
+                    </span>
+
+                    <button disabled="@(currentPage == TotalPages)"
+                            @onclick="() => currentPage++">
+                        ถัดไป
+                    </button>
+
+                </div>
+            }
         </div>
 
         <div class="footer-note">
@@ -501,6 +524,28 @@
     private bool isSavingGroupEdit = false;
     private string oldGroupName = "";
     private string editGroupName = "";
+    private int currentPage = 1;
+    private int pageSize = 30;
+
+    private int TotalPages =>
+    (int)Math.Ceiling(FilteredAccounts.Count() / (double)pageSize);
+
+    private IEnumerable<BankAccount> PagedAccounts =>
+        FilteredAccounts
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize);
+
+    private void SelectGroup(string group)
+{
+    selectedGroup = group;
+    currentPage = 1;
+}
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        currentPage = 1;
+    }
 
     private string GetStatusClass(string status)
     {

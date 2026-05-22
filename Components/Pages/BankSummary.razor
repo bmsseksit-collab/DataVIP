@@ -1,0 +1,103 @@
+﻿@page "/bank-summary"
+
+@using DataVipWeb.Models
+@using DataVipWeb.Services
+@using DataVipWeb.Components.Pages.BankForms
+
+@inject SupabaseService SupabaseService
+@inject NavigationManager Nav
+
+<h1 class="page-title">สรุปบัญชีทุกประเภท</h1>
+<p class="page-subtitle">จำนวนบัญชีแยกตามประเภทบัญชีทั้งหมดในระบบ</p>
+
+@if (isLoading)
+{
+    <div class="loading-box">กำลังโหลดข้อมูล...</div>
+}
+else
+{
+    <div class="summary-grid">
+
+        @foreach (var item in AccountTypeSummaries)
+        {
+            <div class="type-card @BankDetailHelper.GetBankThemeClass(item.BankName)">
+                <div class="card-top">
+                    <div class="bank-logo">
+                        <img src="@BankDetailHelper.GetBankLogo(item.BankName)" />
+                    </div>
+
+                    <div>
+                        <h2>@item.AccountType</h2>
+                        <p>@item.BankName</p>
+                    </div>
+                </div>
+
+                <div class="card-number">@item.Count</div>
+                <div class="card-label">บัญชี</div>
+            </div>
+        }
+
+    </div>
+}
+
+@code {
+    private List<BankAccount> bankAccounts = new();
+    private bool isLoading = true;
+
+    private IEnumerable<AccountTypeSummary> AccountTypeSummaries =>
+        bankAccounts
+            .Where(x => !string.IsNullOrWhiteSpace(x.AccountType))
+            .GroupBy(x => x.AccountType)
+            .Select(g => new AccountTypeSummary
+            {
+                AccountType = g.Key,
+                BankName = GetBankNameFromAccountType(g.Key),
+                Count = g.Count()
+            })
+            .OrderBy(x => x.BankName)
+            .ThenBy(x => x.AccountType);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+
+            var result = await SupabaseService.Client
+                .From<BankAccount>()
+                .Get();
+
+            bankAccounts = result.Models ?? new List<BankAccount>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetBankNameFromAccountType(string accountType)
+    {
+        if (string.IsNullOrWhiteSpace(accountType))
+            return "";
+
+        return accountType.Split(' ')[0];
+    }
+
+    private class AccountTypeSummary
+    {
+        public string AccountType { get; set; } = "";
+        public string BankName { get; set; } = "";
+        public int Count { get; set; }
+    }
+}

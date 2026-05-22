@@ -2,43 +2,56 @@
 @page "/"
 @using DataVipWeb.Models
 @using DataVipWeb.Services
+@using Microsoft.AspNetCore.Components.Web
 
 @inject SupabaseService SupabaseService
 @inject NavigationManager Nav
 
-<div class="login-page">
-    <div class="login-box">
+<div class="login-page"
+     tabindex="0"
+     @onkeydown="HandleKeyDown">
+    <form @onsubmit="HandleLogin">
+        <div class="login-box">
 
-        <h1>DataVIP</h1>
+            <h1>DataVIP</h1>
 
-        <p>เข้าสู่ระบบผู้ดูแล</p>
+            <p>เข้าสู่ระบบผู้ดูแล</p>
 
-        <input placeholder="ชื่อผู้ใช้"
-               @bind="loginUsername" />
+            <input placeholder="ชื่อผู้ใช้"
+                   @bind="loginUsername" />
 
-        <input type="password"
-               placeholder="รหัสผ่าน"
-               @bind="loginPassword" />
+            <input type="password"
+                   placeholder="รหัสผ่าน"
+                   @bind="loginPassword" />
 
-        @if (!string.IsNullOrWhiteSpace(loginError))
-        {
-            <div class="login-error">
-                @loginError
-            </div>
-        }
+            @if (!string.IsNullOrWhiteSpace(loginError))
+            {
+                <div class="login-error">
+                    @loginError
+                </div>
+            }
 
-        <button class="login-btn"
-                @onclick="HandleLogin">
-            เข้าสู่ระบบ
-        </button>
+            <button type="submit"
+                    class="login-btn">
+                เข้าสู่ระบบ
+            </button>
 
-    </div>
+        </div>
+    </form>
 </div>
 
 @code {
     private string loginUsername = "";
     private string loginPassword = "";
     private string loginError = "";
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await HandleLogin();
+        }
+    }
 
     private async Task HandleLogin()
     {
@@ -80,6 +93,7 @@
                 AuthState.IsLoggedIn = true;
                 AuthState.Username = user.Username;
                 AuthState.Role = user.Role;
+                AuthState.LoginAt = DateTime.Now;
 
                 Nav.NavigateTo("/employees");
             }

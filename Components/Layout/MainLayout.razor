@@ -91,6 +91,28 @@
     private bool isSidebarCollapsed = false;
     private bool isBankMenuOpen = false;
 
+    protected override void OnInitialized()
+    {
+        CheckSessionExpired();
+    }
+
+    private void CheckSessionExpired()
+    {
+        if (!AuthState.IsLoggedIn)
+            return;
+
+        if (AuthState.LoginAt == null)
+        {
+            Logout();
+            return;
+        }
+
+        if (DateTime.Now - AuthState.LoginAt.Value >= TimeSpan.FromHours(24))
+        {
+            Logout();
+        }
+    }
+
     private void ToggleBankMenu()
     {
         isBankMenuOpen = !isBankMenuOpen;
@@ -106,6 +128,7 @@
         AuthState.IsLoggedIn = false;
         AuthState.Username = "";
         AuthState.Role = "";
+        AuthState.LoginAt = null;
 
         Nav.NavigateTo("/");
     }
