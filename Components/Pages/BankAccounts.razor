@@ -77,9 +77,11 @@
                  @onclick="() => SelectGroup(string.Empty)">
 
                 <div class="group-content">
-                    <b>บัญชีทั้งหมด</b>
-                    <h1>@bankAccounts.Count</h1>
-                    <p>บัญชี</p>
+                    <div class="group-name">บัญชีทั้งหมด</div>
+
+                    <b>@bankAccounts.Count</b>
+
+                    <div class="group-count">บัญชี</div>
                 </div>
 
             </div>
@@ -109,9 +111,19 @@
                     </div>
 
                     <div class="group-content">
-                        <b>@group</b>
-                        <h1>@bankAccounts.Count(x => x.GroupName == group)</h1>
-                        <p>บัญชี</p>
+
+                        <div class="group-name">
+                            @group
+                        </div>
+
+                        <b>
+                            @bankAccounts.Count(x => x.GroupName == group)
+                        </b>
+
+                        <div class="group-count">
+                            บัญชี
+                        </div>
+
                     </div>
 
                 </div>

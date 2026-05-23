@@ -29,6 +29,7 @@
             {
                 <div class="login-error">
                     @loginError
+
                 </div>
             }
 
@@ -45,6 +46,25 @@
     private string loginUsername = "";
     private string loginPassword = "";
     private string loginError = "";
+    private static Dictionary<string, (int Count, DateTime LastTry)> LoginAttempts = new();
+
+   
+
+    private void RegisterFailedLogin(string ip)
+    {
+        if (LoginAttempts.ContainsKey(ip))
+        {
+            LoginAttempts[ip] =
+            (
+                LoginAttempts[ip].Count + 1,
+                DateTime.Now
+            );
+        }
+        else
+        {
+            LoginAttempts[ip] = (1, DateTime.Now);
+        }
+    }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
@@ -57,6 +77,25 @@
     private async Task HandleLogin()
     {
         loginError = "";
+
+        var ip = "global";
+
+        if (LoginAttempts.ContainsKey(ip))
+        {
+            var attempt = LoginAttempts[ip];
+
+            if (attempt.Count >= 5 &&
+                DateTime.Now - attempt.LastTry < TimeSpan.FromMinutes(10))
+            {
+                loginError = "ลองใหม่อีกครั้งใน 10 นาที";
+                return;
+            }
+
+            if (DateTime.Now - attempt.LastTry > TimeSpan.FromMinutes(10))
+            {
+                LoginAttempts[ip] = (0, DateTime.Now);
+            }
+        }
 
         var result = await SupabaseService.Client
             .From<AppUser>()
@@ -74,7 +113,6 @@
         {
             bool isValidPassword = false;
 
-            // รองรับ password แบบ hash
             if (user.Password.StartsWith("$2"))
             {
                 isValidPassword =
@@ -84,13 +122,14 @@
             }
             else
             {
-                // รองรับ password เก่าแบบ plaintext
                 isValidPassword =
                     user.Password == loginPassword.Trim();
             }
 
             if (isValidPassword)
             {
+                LoginAttempts.Remove(ip);
+
                 AuthState.IsLoggedIn = true;
                 AuthState.Username = user.Username;
                 AuthState.Role = user.Role;
@@ -100,11 +139,13 @@
             }
             else
             {
+                RegisterFailedLogin(ip);
                 loginError = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
             }
         }
         else
         {
+            RegisterFailedLogin(ip);
             loginError = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
         }
     }

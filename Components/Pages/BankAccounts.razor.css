@@ -164,31 +164,210 @@
 
 .group-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+    align-items: stretch;
 }
 
 .group-card {
     position: relative;
-    min-height: 82px;
-    background: white;
+    min-height: 120px;
+    background: linear-gradient(180deg,#ffffff,#fcfbff);
     border: 1px solid #eee5ff;
-    border-radius: 14px;
-    padding: 10px 12px;
+    border-radius: 20px;
+    padding: 16px;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(124, 58, 237, .05);
-    transition: .18s;
+    transition: .25s ease;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(124,58,237,.06), 0 2px 6px rgba(0,0,0,.03);
 }
 
-    .group-card:hover,
-    .group-card.active {
-        transform: translateY(-2px);
+    .group-card:hover {
+        transform: translateY(-4px);
         border-color: #8b5cf6;
-        box-shadow: 0 10px 22px rgba(124, 58, 237, .12);
+        box-shadow: 0 16px 35px rgba(124,58,237,.16), 0 4px 10px rgba(0,0,0,.04);
+    }
+
+    .group-card.active {
+        border: 2px solid #7c3aed;
+        background: linear-gradient(180deg,#ffffff,#f8f5ff);
+        box-shadow: 0 18px 40px rgba(124,58,237,.18);
+    }
+
+.group-card-top {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.group-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.edit-group-btn,
+.delete-group-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: .2s;
+    font-size: 11px;
+}
+
+.edit-group-btn {
+    background: rgba(124,58,237,.10);
+    color: #7c3aed;
+}
+
+    .edit-group-btn:hover {
+        background: #7c3aed;
+        color: white;
+        transform: scale(1.08);
+    }
+
+.delete-group-btn {
+    background: rgba(239,68,68,.10);
+    color: #ef4444;
+}
+
+    .delete-group-btn:hover {
+        background: #ef4444;
+        color: white;
+        transform: scale(1.08);
+    }
+
+.group-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .group-content b {
+        font-size: 24px;
+        color: #24104f;
+        font-weight: 900;
+        line-height: 1;
+        margin: 0;
+    }
+
+.group-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #2e1065;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.group-count {
+    font-size: 13px;
+    color: #7c3aed;
+    font-weight: 700;
+}
+
+.add-group-card {
+    border: 2px dashed #d8c7ff;
+    background: linear-gradient(180deg,#faf7ff,#f5f0ff);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+    .add-group-card:hover {
+        border-color: #7c3aed;
+        background: linear-gradient(180deg,#f5f0ff,#efe7ff);
+    }
+
+.plus-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    background: linear-gradient(135deg,#8b5cf6,#a855f7);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin-bottom: 12px;
+    box-shadow: 0 10px 20px rgba(124,58,237,.22);
+}
+
+.add-group-card span {
+    color: #7c3aed;
+    font-weight: 800;
+    font-size: 15px;
+}
+
+@media (max-width: 768px) {
+    .group-cards {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+    }
+
+    .group-card {
+        min-height: 110px;
+        padding: 14px;
+    }
+
+    .group-content b {
+        font-size: 22px;
+    }
+
+    .group-name {
+        font-size: 15px;
+    }
+}
+/* ซ่อน icon เดิม */
+.group-icon {
+    display: none;
+}
+
+/* =========================
+   GROUP CARDS
+========================= */
+
+.group-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.group-card {
+    position: relative;
+    min-height: 96px;
+    background: linear-gradient(180deg,#ffffff,#fcfbff);
+    border: 1px solid #eee5ff;
+    border-radius: 18px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: .22s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 6px 18px rgba(124,58,237,.06);
+}
+
+    .group-card:hover {
+        transform: translateY(-3px);
+        border-color: #8b5cf6;
+        box-shadow: 0 14px 30px rgba(124,58,237,.14);
+    }
+
+    .group-card.active {
+        border: 2px solid #7c3aed;
+        background: linear-gradient(180deg,#ffffff,#f8f5ff);
+        box-shadow: 0 14px 34px rgba(124,58,237,.16);
     }
 
 .group-card-top {
@@ -200,86 +379,51 @@
 
 .group-actions {
     display: flex;
-    gap: 4px;
+    gap: 5px;
 }
 
 .group-content {
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 3px;
 }
 
-    .group-content b {
-        color: #24104f;
-        font-size: 14px;
-        font-weight: 900;
-        line-height: 1.2;
-        word-break: break-word;
-    }
-
-    .group-content h1 {
-        margin: 2px 0 0;
-        font-size: 18px;
-        line-height: 1;
-        color: #1e1b4b;
-        font-weight: 900;
-    }
-
-    .group-content p {
-        margin: 0;
-        color: #6b5b95;
-        font-weight: 700;
-        font-size: 11px;
-    }
-
-/* ซ่อน icon เดิม */
-.group-icon {
-    display: none;
+.group-name {
+    font-size: 14px;
+    font-weight: 900;
+    color: #2e1065;
+    line-height: 1.25;
+    word-break: break-word;
 }
 
-/* =========================
-   ADD GROUP CARD
-========================= */
+.group-content b {
+    font-size: 20px;
+    color: #24104f;
+    font-weight: 900;
+    line-height: 1;
+    margin: 0;
+}
 
-.add-group-card {
-    min-height: 82px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #f6f0ff;
+.group-count {
+    font-size: 11px;
     color: #7c3aed;
-    border: 1px dashed #c4b5fd;
+    font-weight: 700;
 }
 
-.plus-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #c084fc, #8b5cf6);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    margin-bottom: 4px;
-}
-
-/* =========================
-   GROUP ACTION BUTTONS
-========================= */
+/* ACTION BUTTONS */
 
 .edit-group-btn,
 .delete-group-btn {
     width: 18px;
     height: 18px;
     border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 9px;
+    border-radius: 999px;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
     transition: .18s;
+    font-size: 8px;
     padding: 0;
 }
 
@@ -288,22 +432,92 @@
     color: #7c3aed;
 }
 
+    .edit-group-btn:hover {
+        background: #7c3aed;
+        color: white;
+        transform: scale(1.08);
+    }
+
 .delete-group-btn {
     background: #fee2e2;
-    color: #dc2626;
+    color: #ef4444;
 }
 
-.edit-group-btn:hover {
-    background: #ddd6fe;
-    transform: scale(1.05);
+    .delete-group-btn:hover {
+        background: #ef4444;
+        color: white;
+        transform: scale(1.08);
+    }
+
+/* ADD GROUP CARD */
+
+.add-group-card {
+    min-height: 96px;
+    border: 2px dashed #d8c7ff;
+    background: linear-gradient(180deg,#faf7ff,#f5f0ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
-.delete-group-btn:hover {
-    background: #fecaca;
-    transform: scale(1.08);
+    .add-group-card:hover {
+        border-color: #7c3aed;
+        background: linear-gradient(180deg,#f5f0ff,#efe7ff);
+    }
+
+.plus-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    background: linear-gradient(135deg,#8b5cf6,#a855f7);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 6px;
+    box-shadow: 0 8px 18px rgba(124,58,237,.18);
 }
 
+.add-group-card span {
+    color: #7c3aed;
+    font-weight: 800;
+    font-size: 13px;
+}
 
+/* ซ่อน icon เดิม */
+
+.group-icon {
+    display: none;
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+
+    .group-cards {
+        grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
+        gap: 10px;
+    }
+
+    .group-card {
+        min-height: 88px;
+        padding: 10px 12px;
+    }
+
+    .group-content b {
+        font-size: 18px;
+    }
+
+    .group-name {
+        font-size: 13px;
+    }
+
+    .add-group-card {
+        min-height: 88px;
+    }
+}
 /* =========================
    TABLE
 ========================= */
