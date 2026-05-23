@@ -296,15 +296,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!AuthState.IsLoggedIn)
+        if (!AuthState.IsLoggedIn ||
+            AuthState.LoginAt == null ||
+            DateTime.Now - AuthState.LoginAt.Value > TimeSpan.FromHours(24))
         {
+            AuthState.IsLoggedIn = false;
+            AuthState.Username = "";
+            AuthState.Role = "";
+            AuthState.LoginAt = null;
+
             Nav.NavigateTo("/", forceLoad: true);
             return;
         }
 
         if (AuthState.Role != "owner")
         {
-            Nav.NavigateTo("/employees");
+            Nav.NavigateTo("/employees", forceLoad: true);
             return;
         }
 

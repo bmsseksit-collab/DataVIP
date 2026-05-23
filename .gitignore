@@ -1,5 +1,6 @@
 ﻿# Local config
 appsettings.json
+appsettings.Development.json
 .env
 bin/
 obj/
