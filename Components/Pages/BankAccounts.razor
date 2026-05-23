@@ -76,9 +76,7 @@
             <div class="group-card @(string.IsNullOrWhiteSpace(selectedGroup) ? "active" : "")"
                  @onclick="() => SelectGroup(string.Empty)">
 
-                <div class="group-icon">📋</div>
-
-                <div>
+                <div class="group-content">
                     <b>บัญชีทั้งหมด</b>
                     <h1>@bankAccounts.Count</h1>
                     <p>บัญชี</p>
@@ -91,22 +89,26 @@
                 <div class="group-card @(selectedGroup == group ? "active" : "")"
                      @onclick="() => SelectGroup(group)">
 
-                    <button class="delete-group-btn"
-                            @onclick:stopPropagation="true"
-                            @onclick="() => ConfirmDeleteGroup(group)"
-                            title="ลบสายบัญชี">
-                        🗑
-                    </button>
+                    <div class="group-card-top">
+                        <div class="group-actions">
 
-                    <button class="edit-group-btn"
-                            @onclick:stopPropagation="true"
-                            @onclick="() => OpenEditGroupModal(group)">
-                        ✎
-                    </button>
+                            <button class="edit-group-btn"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => OpenEditGroupModal(group)">
+                                ✎
+                            </button>
 
-                    <div class="group-icon">🏦</div>
+                            <button class="delete-group-btn"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => ConfirmDeleteGroup(group)"
+                                    title="ลบสายบัญชี">
+                                🗑
+                            </button>
 
-                    <div>
+                        </div>
+                    </div>
+
+                    <div class="group-content">
                         <b>@group</b>
                         <h1>@bankAccounts.Count(x => x.GroupName == group)</h1>
                         <p>บัญชี</p>
@@ -119,7 +121,6 @@
                  @onclick="OpenAddGroupModal">
 
                 <div class="plus-icon">+</div>
-
                 <b>เพิ่มสายบัญชี</b>
 
             </div>

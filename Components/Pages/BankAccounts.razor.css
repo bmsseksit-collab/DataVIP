@@ -136,7 +136,7 @@
 
 
 /* =========================
-   GROUP BOX / GROUP CARDS
+   BOXES
 ========================= */
 
 .group-box,
@@ -157,10 +157,15 @@
         font-weight: 900;
     }
 
+
+/* =========================
+   GROUP CARDS
+========================= */
+
 .group-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
+    gap: 10px;
 }
 
 .group-card {
@@ -168,68 +173,96 @@
     min-height: 82px;
     background: white;
     border: 1px solid #eee5ff;
-    border-radius: 16px;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    border-radius: 14px;
+    padding: 10px 12px;
     cursor: pointer;
-    box-shadow: 0 6px 18px rgba(124, 58, 237, .06);
-    transition: .2s;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, .05);
+    transition: .18s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
 }
 
     .group-card:hover,
     .group-card.active {
-        transform: translateY(-3px);
+        transform: translateY(-2px);
         border-color: #8b5cf6;
-        box-shadow: 0 14px 30px rgba(124, 58, 237, .18);
+        box-shadow: 0 10px 22px rgba(124, 58, 237, .12);
     }
 
-.group-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #8b5cf6, #c084fc);
-    color: white;
+.group-card-top {
     display: flex;
+    justify-content: flex-end;
     align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
+    margin-bottom: 4px;
 }
 
-.group-card h1 {
-    margin: 2px 0 0;
-    font-size: 24px;
-    color: #1e1b4b;
+.group-actions {
+    display: flex;
+    gap: 4px;
 }
 
-.group-card p {
-    margin: 0;
-    color: #4b3b78;
-    font-weight: 700;
-    font-size: 13px;
+.group-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
+
+    .group-content b {
+        color: #24104f;
+        font-size: 14px;
+        font-weight: 900;
+        line-height: 1.2;
+        word-break: break-word;
+    }
+
+    .group-content h1 {
+        margin: 2px 0 0;
+        font-size: 18px;
+        line-height: 1;
+        color: #1e1b4b;
+        font-weight: 900;
+    }
+
+    .group-content p {
+        margin: 0;
+        color: #6b5b95;
+        font-weight: 700;
+        font-size: 11px;
+    }
+
+/* ซ่อน icon เดิม */
+.group-icon {
+    display: none;
+}
+
+/* =========================
+   ADD GROUP CARD
+========================= */
 
 .add-group-card {
+    min-height: 82px;
+    display: flex;
     justify-content: center;
-    flex-direction: column;
-    color: #6d28ff;
-    background: #f4edff;
+    align-items: center;
+    background: #f6f0ff;
+    color: #7c3aed;
+    border: 1px dashed #c4b5fd;
 }
 
 .plus-icon {
-    width: 44px;
-    height: 44px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #c084fc, #a78bfa);
+    background: linear-gradient(135deg, #c084fc, #8b5cf6);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 22px;
+    margin-bottom: 4px;
 }
-
 
 /* =========================
    GROUP ACTION BUTTONS
@@ -237,31 +270,25 @@
 
 .edit-group-btn,
 .delete-group-btn {
-    position: absolute;
-    top: 6px;
     width: 18px;
     height: 18px;
     border: none;
     border-radius: 50%;
-    font-size: 9px;
-    font-weight: bold;
     cursor: pointer;
+    font-size: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: .18s;
     padding: 0;
-    line-height: 1;
-    transition: .2s;
 }
 
 .edit-group-btn {
-    right: 32px;
     background: #ede9fe;
     color: #7c3aed;
 }
 
 .delete-group-btn {
-    right: 8px;
     background: #fee2e2;
     color: #dc2626;
 }
@@ -676,53 +703,8 @@ tbody tr:hover {
 
 
 /* =========================
-   RESPONSIVE
+   PAGINATION
 ========================= */
-
-@@media (max-width: 1100px) {
-    .summary-cards {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .group-cards {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .bank-header {
-        flex-direction: column;
-    }
-
-    .header-actions {
-        width: 100%;
-        flex-wrap: wrap;
-    }
-}
-
-@@media (max-width: 700px) {
-    .summary-cards,
-    .group-cards {
-        grid-template-columns: 1fr;
-    }
-
-    .search-box,
-    .group-filter,
-    .add-btn {
-        width: 100%;
-    }
-
-    .modal-box,
-    .large-modal {
-        width: 92vw;
-    }
-
-    .modal-grid,
-    ::deep .modal-grid,
-    .status-box {
-        grid-template-columns: 1fr;
-    }
-
-    
-}
 
 .pagination-box {
     display: flex;
@@ -751,3 +733,51 @@ tbody tr:hover {
         font-weight: 900;
         color: #24104f;
     }
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 1100px) {
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .group-cards {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .bank-header {
+        flex-direction: column;
+    }
+
+    .header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 700px) {
+    .summary-cards,
+    .group-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .search-box,
+    .group-filter,
+    .add-btn {
+        width: 100%;
+    }
+
+    .modal-box,
+    .large-modal {
+        width: 92vw;
+    }
+
+    .modal-grid,
+    ::deep .modal-grid,
+    .status-box {
+        grid-template-columns: 1fr;
+    }
+}
