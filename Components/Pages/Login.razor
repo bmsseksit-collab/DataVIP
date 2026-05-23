@@ -1,8 +1,10 @@
-﻿@layout EmptyLayout
+﻿@attribute [AllowAnonymous]
+@layout EmptyLayout
 @page "/"
 @using DataVipWeb.Models
 @using DataVipWeb.Services
 @using Microsoft.AspNetCore.Components.Web
+
 
 @inject SupabaseService SupabaseService
 @inject NavigationManager Nav
