@@ -1,5 +1,4 @@
-﻿@attribute [Authorize]
-@page "/banks"
+﻿@page "/banks"
 @using DataVipWeb.Components.Pages.BankForms
 @using DataVipWeb.Models
 @using DataVipWeb.Services
@@ -1059,7 +1058,7 @@
     {
         if (!AuthState.IsLoggedIn)
         {
-            Nav.NavigateTo("/");
+            Nav.NavigateTo("/", forceLoad: true);
             return;
         }
 

@@ -1,5 +1,4 @@
-﻿@attribute [Authorize]
-@page "/bank-summary"
+﻿@page "/bank-summary"
 
 @using DataVipWeb.Models
 @using DataVipWeb.Services
@@ -62,7 +61,7 @@ else
     {
         if (!AuthState.IsLoggedIn)
         {
-            Nav.NavigateTo("/");
+            Nav.NavigateTo("/", forceLoad: true);
             return;
         }
 
