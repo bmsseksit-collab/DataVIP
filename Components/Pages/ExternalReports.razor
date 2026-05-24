@@ -15,6 +15,31 @@
             <p>สรุปยอดฝากตามบัญชีจากเว็บภายนอก</p>
         </div>
 
+        <div class="api-inputs">
+
+            <div class="api-field">
+                <label>API URL</label>
+
+                <input class="api-input"
+                       placeholder="วาง URL API ของ BM"
+                       @bind="apiUrlInput" />
+            </div>
+
+            <div class="api-field">
+                <label>Bearer Token</label>
+
+                <input class="api-input"
+                       placeholder="วาง Bearer Token"
+                       @bind="bearerTokenInput" />
+            </div>
+
+            <button class="save-api-btn"
+                    @onclick="SaveApiSettings">
+                บันทึก
+            </button>
+
+        </div>
+
         <div class="header-actions">
             <input type="date"
                    class="date-input"
@@ -181,8 +206,42 @@
     private bool isLoading = false;
     private bool isError = false;
     private string message = "";
+    private string apiUrlInput = "";
+    private string bearerTokenInput = "";
 
     private Dictionary<string, string> bankFilters = new();
+
+    private async Task SaveApiSettings()
+    {
+        try
+        {
+            var sites = await SupabaseService.Client
+                .From<ExternalSite>()
+                .Get();
+
+            var site = sites.Models
+                .FirstOrDefault(x => x.SiteCode == "BM");
+
+            if (site == null)
+                throw new Exception("ไม่พบเว็บ BM");
+
+            site.ApiUrl = apiUrlInput.Trim();
+            site.BearerToken = bearerTokenInput.Trim();
+
+            await SupabaseService.Client
+                .From<ExternalSite>()
+                .Where(x => x.Id == site.Id)
+                .Update(site);
+
+            message = "บันทึก API URL และ Token สำเร็จ";
+            isError = false;
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+            isError = true;
+        }
+    }
 
     private string GetBankFilter(string groupName)
     {
@@ -240,6 +299,9 @@
                 return;
             }
 
+            apiUrlInput = site.ApiUrl ?? "";
+            bearerTokenInput = site.BearerToken ?? "";
+
             var result = await SupabaseService.Client
                 .From<ExternalBankReport>()
                 .Where(x => x.SiteId == site.Id)
@@ -288,9 +350,19 @@
 
             if (site == null)
                 throw new Exception("ยังไม่พบเว็บ BM ใน external_sites");
+            if (string.IsNullOrWhiteSpace(apiUrlInput))
+                throw new Exception("กรุณาใส่ API URL");
 
-            if (string.IsNullOrWhiteSpace(site.BearerToken))
-                throw new Exception("ยังไม่ได้ใส่ Bearer Token ของเว็บ BM ใน external_sites");
+            if (string.IsNullOrWhiteSpace(bearerTokenInput))
+                throw new Exception("กรุณาใส่ Bearer Token");
+
+            site.ApiUrl = apiUrlInput.Trim();
+            site.BearerToken = bearerTokenInput.Trim();
+
+            await SupabaseService.Client
+                .From<ExternalSite>()
+                .Where(x => x.Id == site.Id)
+                .Update(site);
 
             // ลบข้อมูล BM เก่าทั้งหมดก่อน ไม่สนวันที่
             var oldReports = await SupabaseService.Client
