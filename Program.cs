@@ -9,6 +9,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddSingleton<SupabaseService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ExternalApiService>();
 
 builder.Services.AddRateLimiter(options =>
 {
