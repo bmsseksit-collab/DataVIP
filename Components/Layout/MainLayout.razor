@@ -53,12 +53,7 @@
                 }
 
             </div>
-            <a class="menu-item"
-               @onclick='() => Nav.NavigateTo("/external-reports")'>
-                <span class="menu-icon">📊</span>
-                <span>การใช้งานบัญชี</span>
-            </a>
-
+        
             @if (AuthState.Role == "owner")
             {
                 <a class="menu-item"
